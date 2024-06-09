@@ -1,0 +1,18 @@
+# License: LGPL-2.1
+#
+name: Build 2
+on: [workflow_call]
+jobs:
+  Build-20:
+    name: Build 20
+    runs-on: ubuntu-22.04
+    steps:
+    - run: echo Build 200
+    - name: Step-201
+      run: echo Build 201
+  Build-21:
+    runs-on: ubuntu-22.04
+    steps:
+    - run: echo Build 210
+    - name: Step-201
+      run: echo Build 211

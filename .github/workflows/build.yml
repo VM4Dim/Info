@@ -1,0 +1,59 @@
+# License: LGPL-2.1
+#
+name: Master Build
+on: [workflow_dispatch]
+jobs:
+  Start:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        shell: bash
+    steps:
+     - run: echo Start 0
+     - name: Start-1
+       run: echo Start 1
+     - name: Start-2 ls
+       run: ls -alFh
+     - name: Start-3 git checkout
+       uses: actions/checkout@v4
+     - name: git log
+       run: git log --all --graph --date-order --decorate --oneline -25
+     - name: Start-4 ls
+       run: ls -alFh
+       
+     - name: Start-5 apt update
+       run: |
+         # cat /etc/apt/sources.list
+         ls -alFh /etc/apt/sources.list.d
+         # cat /etc/apt/sources.list.d/*
+         sudo apt-get update
+         
+     - name: Start-5 apt upgrade
+       run: |
+         # sudo apt-get upgrade -V
+         apt list --installed | tee apt-list.txt | wc
+         ls -alFh /usr/local/bin | tee local-bin.txt | wc
+     - name: Start-5 apt list upload
+       uses: actions/upload-artifact@v4
+       with:
+         name: apt-list.txt
+         path: |
+           apt-list.txt
+           local-bin.txt
+           /etc/apt/sources.list
+           /etc/apt/sources.list.d/*
+
+     - name: Start-6 cmake
+       run: |
+         which -a cmake
+         cmake --version
+
+  Build-1:
+    name: Build 1
+    runs-on: ubuntu-22.04
+    steps:
+    - name: Step-10
+      run: echo Build 10
+    - run: echo Build 11
+  Build-2:
+    uses: ./.github/workflows/build-2.yml
