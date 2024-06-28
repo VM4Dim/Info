@@ -1,59 +1,299 @@
 # License: LGPL-2.1
 #
-name: Master Build
-on: [workflow_dispatch]
-jobs:
-  Start:
-    runs-on: ubuntu-24.04
-    defaults:
-      run:
-        shell: bash
-    steps:
-     - run: echo Start 0
-     - name: Start-1
-       run: echo Start 1
-     - name: Start-2 ls
-       run: ls -alFh
-     - name: Start-3 git checkout
-       uses: actions/checkout@v4
-     - name: git log
-       run: git log --all --graph --date-order --decorate --oneline -25
-     - name: Start-4 ls
-       run: ls -alFh
-       
-     - name: Start-5 apt update
-       run: |
-         # cat /etc/apt/sources.list
-         ls -alFh /etc/apt/sources.list.d
-         # cat /etc/apt/sources.list.d/*
-         sudo apt-get update
-         
-     - name: Start-5 apt upgrade
-       run: |
-         # sudo apt-get upgrade -V
-         apt list --installed | tee apt-list.txt | wc
-         ls -alFh /usr/local/bin | tee local-bin.txt | wc
-     - name: Start-5 apt list upload
-       uses: actions/upload-artifact@v4
-       with:
-         name: apt-list.txt
-         path: |
-           apt-list.txt
-           local-bin.txt
-           /etc/apt/sources.list
-           /etc/apt/sources.list.d/*
 
-     - name: Start-6 cmake
-       run: |
-         which -a cmake
-         cmake --version
+name: Master Build
+
+on:
+  - workflow_dispatch
+#  - push
+
+jobs:
+  Build-0:
+    name: Build ${{matrix.comp.cc}} ${{matrix.build}}
+
+    runs-on: ubuntu-24.04
+    if: false
+
+    permissions:
+      contents: write
+
+    strategy:
+      matrix:
+        build: [Release, RelWithDebInfo]
+        comp:
+          - {cc: gcc-13,   cxx: g++-13,     rel-deb: "-O2 -g -gz=zstd -DNDEBUG"}
+#          - {cc: clang-18, cxx: clang++-18, rel-deb: "-O2 -g -gz      -DNDEBUG"}
+
+    env:
+      CMAKE_BUILD_TYPE: ${{matrix.build}}
+
+      SOURCE_DIR: ${{github.workspace}}/occt-source
+      BUILD_DIR:  ${{github.workspace}}/occt-build
+      CCACHE_DIR: ${{github.workspace}}/occt-ccache
+      CCACHE_COMPRESSLEVEL: 4
+
+      CMAKE_INSTALL_PREFIX: ${{github.workspace}}/occt
+      CMAKE_INSTALL_RPATH: '$ORIGIN/../lib'
+
+      CC:  ${{matrix.comp.cc}}
+      CXX: ${{matrix.comp.cxx}}
+
+      CMAKE_C_FLAGS_RELWITHDEBINFO:   ${{matrix.comp.rel-deb}}
+      CMAKE_CXX_FLAGS_RELWITHDEBINFO: ${{matrix.comp.rel-deb}}
+
+      CMAKE_C_COMPILER_LAUNCHER:   ccache
+      CMAKE_CXX_COMPILER_LAUNCHER: ccache
+
+    steps:
+    - run: echo Start 0
+
+    - name: Start-1
+      run: |
+        echo $GITHUB_WORKSPACE - ${GITHUB_WORKSPACE} - ${{github.workspace}} / $CCACHE_DIR - ${CCACHE_DIR} - ${{env.CCACHE_DIR}}
+        mkdir -p $CCACHE_DIR
+        mkdir -p $BUILD_DIR
+        echo nproc: $(nproc)
+
+    - name: Apt Update
+      run: |
+        sudo apt-get update
+
+    - name: Apt Install
+      run: |
+        sudo apt-get install -V            \
+          ccache                           \
+          libfreetype-dev   libfreetype6   \
+          libfreeimage-dev  libfreeimage3  \
+          tcl-dev tk-dev    tcl tk         \
+          libgl-dev         libgl1         \
+          libeigen3-dev                    \
+          musl-tools
+
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        repository: Open-Cascade-SAS/OCCT
+        path: ${{env.SOURCE_DIR}}
+
+    - name: Restore Ccache
+      uses: actions/cache/restore@v4
+      with:
+        path: ${{env.CCACHE_DIR}}
+        key: occt-${{env.CC}}-${{matrix.build}}-${{github.run_id}}
+        restore-keys: |
+          occt-${{env.CC}}-${{matrix.build}}
+
+    - name: Start Stat
+      id: Start_Stat
+      run: |
+        ls -alFh .; du -sch *
+        ccache -p; ccache -s; ccache -z;
+        echo "START_TIMESTAMP=$(date '+%s')" >> $GITHUB_OUTPUT
+
+    - name: CMake
+      run: |
+        cmake -S $SOURCE_DIR -B $BUILD_DIR \
+          -DUSE_FREEIMAGE=ON \
+          -DCMAKE_INSTALL_RPATH=$CMAKE_INSTALL_RPATH \
+          -DCMAKE_C_FLAGS_RELWITHDEBINFO="$CMAKE_C_FLAGS_RELWITHDEBINFO" \
+          -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="$CMAKE_CXX_FLAGS_RELWITHDEBINFO"
+
+    - name: Upload CMakeCache.txt
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: CMakeCache-${{env.CC}}-${{matrix.build}}
+        path: ${{env.BUILD_DIR}}/CMakeCache.txt
+
+    - name: CMake --build
+      run: |
+        cmake --build $BUILD_DIR -j4
+        #tar -acf build-lin64.tzst $BUILD_DIR/lin64
+
+    - name: Clean ccache
+      env:
+        START_TIMESTAMP: ${{steps.Start_Stat.outputs.START_TIMESTAMP}}
+      run: |
+        echo $START_TIMESTAMP - ${START_TIMESTAMP} - ${{env.START_TIMESTAMP}}
+        ccache -s
+        MIN_OLD_CCACHE=$[ 1 + ($(date '+%s') - $START_TIMESTAMP) / 60 ]
+        echo $MIN_OLD_CCACHE
+        du -sh $CCACHE_DIR
+        rm -f $(find $CCACHE_DIR -name '*[M|R]' -mmin +$MIN_OLD_CCACHE);
+        du -sh $CCACHE_DIR
+
+    - name: Save ccache
+      uses: actions/cache/save@v4
+      with:
+        path: ${{env.CCACHE_DIR}}
+        key: occt-${{env.CC}}-${{matrix.build}}-${{github.run_id}}
+
+    - name: CMake --install
+      run: |
+        sudo cmake --install $BUILD_DIR
+        tar -acf occt-${{env.CC}}-${{matrix.build}}.tzst occt
+        du -sh $BUILD_DIR/lin* occt *.tzst
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        compression-level: 0
+        name: occt-${{env.CC}}-${{matrix.build}}
+        path: occt-${{env.CC}}-${{matrix.build}}.tzst
+
+    - name: Upload Release
+      env:
+        GH_TOKEN: ${{github.token}}
+      run: |
+        gh release upload --clobber -R ${{github.repository}} v0 occt-${{env.CC}}-${{matrix.build}}.tzst
+
+    - name: End Stat
+      if: always()
+      run: |
+        ls -alFh .; du -sch *
 
   Build-1:
     name: Build 1
-    runs-on: ubuntu-22.04
+
+#    needs: Build-0
+
+    runs-on: ubuntu-24.04
+
+    env:
+      CMAKE_BUILD_TYPE: Release
+
+      SOURCE_DIR: ${{github.workspace}}/fc-source
+      BUILD_DIR:  ${{github.workspace}}/fc-build
+      CCACHE_DIR: ${{github.workspace}}/fc-ccache
+      CCACHE_COMPRESSLEVEL: 4
+
+      CMAKE_INSTALL_PREFIX: ${{github.workspace}}/fc
+      CMAKE_INSTALL_RPATH: '$ORIGIN/../lib:$ORIGIN/../../occt/lib'
+
+      CC:  gcc-13
+      CXX: g++-13
+
+      CMAKE_C_COMPILER_LAUNCHER:   ccache
+      CMAKE_CXX_COMPILER_LAUNCHER: ccache
+
+      OpenCASCADE_DIR: ${{github.workspace}}/occt/lib/cmake/opencascade
+
     steps:
     - name: Step-10
       run: echo Build 10
-    - run: echo Build 11
+
+#    - name: Download artifact
+#      uses: actions/download-artifact@v4
+#      with:
+#        name: occt-gcc-13-Release
+
+    - name: Download release occt
+      run: |
+        wget -nv https://github.com/VM4Dim/Info/releases/download/v0/occt-gcc-13-Release.tzst
+        tar -xf occt-gcc-13-Release.tzst
+
+    - name: Start
+      if: always()
+      run: |
+        mkdir -p $BUILD_DIR
+        mkdir -p $CCACHE_DIR
+
+    - name: Apt Update
+      run: |
+        sudo apt-get update
+
+    - name: Apt Install
+      run: |
+        sudo apt-get install -V         \
+          ccache                        \
+          qttools5-dev                  \
+          libyaml-cpp-dev               \
+          libxerces-c-dev               \
+          libboost-filesystem-dev       \
+          libboost-regex-dev            \
+          libboost-program-options-dev  \
+          libboost-thread-dev           \
+          libvtk9-dev                   \
+          libmed-dev libmedc-dev        \
+          libqt5xmlpatterns5-dev        \
+          libqt5svg5-dev                \
+          libcoin-dev                   \
+          python3-pivy                  \
+          libboost-python-dev           \
+          libpyside2-dev                \
+          libshiboken2-dev              \
+          libfreeimage-dev
+
+    - name: Git Checkout
+      uses: actions/checkout@v4
+      with:
+        repository: FreeCAD/FreeCAD
+        path: ${{env.SOURCE_DIR}}
+
+    - name: Git Submodule
+      run: |
+        (cd $SOURCE_DIR; git submodule update --init)
+
+    - name: Restore Ccache
+      uses: actions/cache/restore@v4
+      with:
+        path: ${{env.CCACHE_DIR}}
+        key: fc-${{env.CC}}-Release
+
+    - name: Start Stat
+      id: Start_Stat
+      run: |
+        ls -alFh .; du -sch *
+        ccache -s; ccache -z;
+        echo "START_TIMESTAMP=$(date '+%s')" >> $GITHUB_OUTPUT
+
+    - name: CMake
+      run: |
+        cmake -S $SOURCE_DIR -B $BUILD_DIR \
+          -DCMAKE_INSTALL_RPATH=$CMAKE_INSTALL_RPATH
+
+    - name: Upload CMakeCache.txt
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: fc-CMakeCache
+        path: ${{env.BUILD_DIR}}/CMakeCache.txt
+
+    - name: CMake --build
+      run: |
+        cmake --build $BUILD_DIR -j4
+
+    - name: Clean ccache
+      env:
+        START_TIMESTAMP: ${{steps.Start_Stat.outputs.START_TIMESTAMP}}
+      if: always()
+      run: |
+        echo $START_TIMESTAMP - ${START_TIMESTAMP} - ${{env.START_TIMESTAMP}}
+        ccache -s
+        MIN_OLD_CCACHE=$[ 1 + ($(date '+%s') - $START_TIMESTAMP) / 60 ]; echo $MIN_OLD_CCACHE
+        du -sh $CCACHE_DIR
+        rm -f $(find $CCACHE_DIR -name '*[M|R]' -mmin +$MIN_OLD_CCACHE);
+        du -sh $CCACHE_DIR
+
+    - name: Save ccache
+      uses: actions/cache/save@v4
+      with:
+        path: ${{env.CCACHE_DIR}}
+        key: fc-${{env.CC}}-Release-${{github.run_id}}
+
+    - name: CMake --install
+      run: |
+        sudo cmake --install $BUILD_DIR
+        tar -acf fc-${{env.CC}}-Release.tzst fc
+        du -sh fc *.tzst
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        compression-level: 0
+        name: occt-${{env.CC}}-Release
+        path: occt-${{env.CC}}-Release.tzst
+
+
   Build-2:
     uses: ./.github/workflows/build-2.yml
