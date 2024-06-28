@@ -152,6 +152,8 @@ jobs:
       run: |
         ls -alFh .; du -sch *
 
+########################################################################################################################
+
   Build-1:
     name: Build 1
 
@@ -232,7 +234,7 @@ jobs:
 
     - name: Git Submodule
       run: |
-        (cd $SOURCE_DIR; git submodule update --init)
+        ( cd $SOURCE_DIR; git submodule update --init; git fetch --shallow-since=2024-06-01; )
 
     - name: Restore Ccache
       uses: actions/cache/restore@v4
