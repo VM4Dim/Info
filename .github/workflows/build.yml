@@ -268,7 +268,6 @@ jobs:
         START_TIMESTAMP: ${{steps.Start_Stat.outputs.START_TIMESTAMP}}
       if: always()
       run: |
-        echo $START_TIMESTAMP - ${START_TIMESTAMP} - ${{env.START_TIMESTAMP}}
         ccache -s
         MIN_OLD_CCACHE=$[ 1 + ($(date '+%s') - $START_TIMESTAMP) / 60 ]; echo $MIN_OLD_CCACHE
         du -sh $CCACHE_DIR
@@ -291,9 +290,13 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         compression-level: 0
-        name: occt-${{env.CC}}-Release
-        path: occt-${{env.CC}}-Release.tzst
+        name: fc-${{env.CC}}-Release
+        path: fc-${{env.CC}}-Release.tzst
 
+    - name: End Stat
+      if: always()
+      run: |
+        ls -alFh .; du -sch *
 
   Build-2:
     uses: ./.github/workflows/build-2.yml
