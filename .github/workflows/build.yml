@@ -785,7 +785,8 @@ jobs:
                                FC-x64-Dev.R${FC_DPREV_REV}.20${FC_DPREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AIDelta
 
                     gh release upload --clobber -R ${{github.repository}} v0.0 \
-                               FC-x64-Dev.R${FC_DPREV_REV}.20${FC_DPREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AIDelta || echo ‖OR_True-$LINENO
+                              "FC-x64-Dev.R${FC_DPREV_REV}.20${FC_DPREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AIDelta#"\
+        `                    `"FC-x64-Dev.R${FC_DPREV_REV}.${FC_DPREV_DATE:2}_R${FC_BUILD_REV}.${FC_BUILD_DATE:2}.AIDelta" || echo ‖OR_True-$LINENO
 
                     echo "Upload: FC-x64-Dev.R${FC_DPREV_REV}.20${FC_DPREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AIDelta"
                 fi
@@ -816,10 +817,6 @@ jobs:
 
             gh release download -R ${{github.repository}} $UNTAG_SIGN -p $FC_PREV.sign || echo ‖OR_True-$LINENO
 
-            #[ ! -f $FC_PREV.sign ] \
-            #    && gh release download -R ${{github.repository}} $UNTAG_DAILY -p $FC_PREV \
-            #    && rdiff -b1024 signature $FC_PREV $FC_PREV.sign || echo ‖OR_True-$LINENO
-
             if [ -f $FC_PREV.sign ]; then
 
                 rdiff delta $FC_PREV.sign FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage \
@@ -839,7 +836,8 @@ jobs:
                            FC-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AIDelta
 
                 gh release upload --clobber -R ${{github.repository}} v0.0 \
-                           FC-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AIDelta || echo ‖OR_True-$LINENO
+                          "FC-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AIDelta#"\
+        `                `"FC-x64-Dev.R${FC_PREV_REV}.${FC_PREV_DATE:2}_R${FC_BUILD_REV}.${FC_BUILD_DATE:2}.AIDelta" || echo ‖OR_True-$LINENO
 
                 echo "Upload: FC-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AIDelta"
 
