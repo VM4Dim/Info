@@ -1,0 +1,186 @@
+# License: LGPL-2.1
+#
+name: Build 2
+
+on:
+  workflow_call:
+  workflow_dispatch:
+    inputs:
+      test1:
+        default: test-1111-b2
+      test2:
+        default:
+env:
+  ZZZZ: ${{vars.PR_MERGE_LIST}}
+  ZZZZ2: "${{vars.PR_MERGE_LIST}}"
+  ENV_JOB2: Env-2.2
+
+jobs:
+
+  Build-20:
+    name: Build 20
+    runs-on: ubuntu-26.04
+    steps:
+    - run: echo Build 200
+    - name: Step-201
+      run: echo Build 201
+
+  Build-21:
+    needs: Build-20
+    runs-on: ubuntu-26.04
+    permissions: write-all
+#    permissions:
+#      contents: write
+    steps:
+    - run: echo Build 210
+    - name: Step-211
+      env:
+        GITHUB_TOKEN: ${{github.token}}
+        #GITHUB_TOKEN: ${{secrets.BUILD_TO_FC}}
+
+        UNTAG_DAILY: untagged-
+        UNTAG_SIGN:  untagged-
+
+        TEST1: ${{ inputs.test1 }}
+        TEST2: ${{ inputs.test2 }}
+        TEST3: ${{ inputs.test3 }}
+
+      run: |
+        echo Build 211 OCCT
+        gcc --version; g++ --version; cc --version; c++ --version;
+        gcc-15 --version || echo NO GCC-15
+        gcc-16 --version || echo NO GCC-16
+        gcc-17 --version || echo NO GCC-17
+
+        # gh repo sync VM4Dim/OCCT -s Open-Cascade-SAS/OCCT -b master
+
+        echo date = $(date '+%Y-%m-%d_%H%M%S')  date -u = $(date -u '+%Y-%m-%d_%H%M%S')
+
+        echo ----
+        gh release list -R ${{github.repository}}
+        echo ----
+        gh release list -R ${{github.repository}} --json name,tagName
+        echo ----
+        gh release list -R VM4Dim/FreeCAD
+        echo ----
+
+        echo 'z' > zz1.txt
+        echo 'zz' > zz2.txt
+        echo 'zzz' > zz3.txt
+        # gh release upload --clobber -R VM4Dim/Info $UNTAG_DAILY zz3.txt#ZZ-5.txt || true
+        # gh release upload --clobber -R VM4Dim/Info $UNTAG_DAILY zz1.txt#ZZ-5.txt || true
+        # gh release upload --clobber -R VM4Dim/Info $UNTAG_DAILY zz2.txt#ZZ-4.txt || true
+
+        # gh release edit -R ${{github.repository}} $UNTAG_SIGN --draft --notes "===="
+
+        gh workflow list -R VM4Dim/FreeCAD
+        echo -----
+        # gh workflow run -R VM4Dim/FreeCAD CI_master.yml
+        # gh release upload --clobber -R VM4Dim/FreeCAD v0 zz2.txt#ZZ-44.txt || true
+
+        echo 1 = 2 1 # 2
+        echo 3 =4  3 #4
+        echo 5= 6  5# 6
+        echo 7=8   7#8
+
+        echo 1 = 2 1 # 2 LL
+        echo 3 =4  3 #4  LL
+        echo 5= 6  5# 6  LL
+        echo 7=8   7#8   LL
+
+        echo 77=\00   77#\
+        00   LLLL
+
+        echo 77= \B0   77# \
+        B0   LLLL
+
+        echo 77=\ 0B   77#\
+         0B   LLLL
+
+        echo 77= \ BB   77# \
+         BB   LLLL
+
+
+        echo 1 - =====$ZZZZ=====
+        for PR_NUM in $ZZZZ; do echo 1.=1=$PR_NUM=2=${PR_NUM}=3=; done
+
+        echo 2 - ===="$ZZZZ"====
+        for PR_NUM in "$ZZZZ"; do echo "2.=A=$PR_NUM=B=${PR_NUM}=C="; done
+
+        ZZZ3=$(echo $ZZZZ)
+        echo 3 - ====$ZZZ3====
+        for PR_NUM in $ZZZ3; do echo "3.=(=$PR_NUM=^=${PR_NUM}=)="; done
+
+        read <<<$ZZZZ ZZZ4
+        echo 4 - ====$ZZZ4====
+        for PR_NUM in $ZZZ3; do echo "4.=(=$PR_NUM=^=${PR_NUM}=)="; done
+
+
+  Build-22:
+    name: Build 22 ${{matrix.variant}}
+    needs: Build-21
+    runs-on: ubuntu-26.04
+    strategy:
+      matrix:
+        variant: [A, B]
+    steps:
+    - run: echo Build 220 ${{matrix.variant}}
+    - name: Step-221
+      run: echo Build 221 ${{matrix.variant}}
+
+  Build-23:
+    needs: Build-22
+    runs-on: ubuntu-26.04
+    env:
+      ENV_SUBJOB: Env-3
+    steps:
+    - run: echo Build 230
+    - uses: actions/checkout@v6
+    - uses: ./.github/workflows/actions/new
+
+  Build-24:
+    needs: Build-22
+    if: false
+    runs-on: ubuntu-26.04
+
+    steps:
+
+    - name: Check revision
+      id: check-rev
+      run: |
+        echo "NEED_BUILD=YES" >> $GITHUB_OUTPUT
+        echo "BUILD_NOW=NO"   >> $GITHUB_OUTPUT
+        curl -s https://api.github.com/repos/${{github.repository}}/releases/tags/v0 \
+          | jq --jsonargs .assets[].browser_download_url \
+          | grep https://github.com/${{github.repository}}/releases/download/v0/fc-occt-gcc-14-RelWithDebInfo.sqsh \
+          && OC_NEED_BUILD=NO || OC_NEED_BUILD=YES
+        echo "OC_NEED_BUILD=$OC_NEED_BUILD" >> $GITHUB_OUTPUT
+
+    - run: echo Build 240 {Y} NEED_BUILD ${{steps.check-rev.outputs.NEED_BUILD}}
+      if: ${{steps.check-rev.outputs.NEED_BUILD == 'YES'}}
+
+    - run: echo Build 240 {N} NEED_BUILD ${{steps.check-rev.outputs.NEED_BUILD}}
+      if: ${{steps.check-rev.outputs.NEED_BUILD == 'NO'}}
+
+    - run: echo Build 241 {Y} BUILD_NOW ${{steps.check-rev.outputs.BUILD_NOW}}
+      if: ${{steps.check-rev.outputs.BUILD_NOW == 'YES'}}
+
+    - run: echo Build 241 {N} BUILD_NOW ${{steps.check-rev.outputs.BUILD_NOW}}
+      if: ${{steps.check-rev.outputs.BUILD_NOW == 'NO'}}
+
+    - run: echo Build 242
+
+    - run: echo Build 243
+      if: false
+
+    - run: echo Build 244
+
+    - run: echo Build 245 {Y} OC_NEED_BUILD ${{steps.check-rev.outputs.OC_NEED_BUILD}}
+      if: ${{steps.check-rev.outputs.OC_NEED_BUILD == 'YES'}}
+
+    - run: echo Build 245 {N} OC_NEED_BUILD ${{steps.check-rev.outputs.OC_NEED_BUILD}}
+      if: ${{steps.check-rev.outputs.OC_NEED_BUILD == 'NO'}}
+
+
+
+

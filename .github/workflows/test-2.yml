@@ -1,0 +1,94 @@
+name: Test-2
+
+on: workflow_dispatch
+
+run-name: Test 2
+
+jobs:
+  Test_2:
+    runs-on: ubuntu-26.04
+
+    name: Test_2 - ${{github.run_number}}.${{github.run_attempt}}
+
+    strategy:
+      matrix:
+        REV:
+        - 41726
+
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+      FC_REV: ${{matrix.REV}}
+      UNTAG_SIGN: untagged-8de4416c50f0da0b813e
+
+    steps:
+    - name: Get AppImage ${{env.FC_REV}}
+      run: |
+        #wget -nv https://github.com/FreeCAD/FreeCAD-Bundle/releases/download/weekly-builds/FreeCAD_weekly-builds-${{env.FC_REV}}-conda-Linux-x86_64-py311.AppImage
+        #sudo chmod +x FreeCAD_weekly-builds-${{env.FC_REV}}-conda-Linux-x86_64-py311.AppImage
+
+    - name: Run AppImage
+      run: |
+        #./FreeCAD_weekly-builds-${{env.FC_REV}}-conda-Linux-x86_64-py311.AppImage freecadcmd -v
+        #./FreeCAD_weekly-builds-${{env.FC_REV}}-conda-Linux-x86_64-py311.AppImage -c "print('== Test-19632 ==')" || true
+
+    - name: Context
+      run: |
+        echo "1-${{github.event_name}}"
+        echo "2-${{   '{{github.event_name}}' }}"
+        # echo "3-${{ '${{github.event_name}}' }}"
+        echo "4-\$${{ '{{github.event_name}}' }}"
+
+    - name: Clean
+      if: false
+      run: |
+        CLEAN_DATE=$(date -u --date="-9 day" "+%Y%m%d")
+        echo CLEAN_DATE = ${CLEAN_DATE} ${CLEAN_DATE:6}
+
+        gh release view -R ${{github.repository}} $UNTAG_SIGN --json assets --jq .assets[].name
+
+        if [[ ${CLEAN_DATE:7} != 5 ]]; then
+          echo del_list
+          DEL_LIST=$(gh release view -R ${{github.repository}} $UNTAG_SIGN --json assets --jq .assets[].name \
+            | grep -E "FreeCaD-x64-Dev-R.+${CLEAN_DATE}.+AppImage.sign") || echo ‖true-$LINENO
+          echo DEL_LIST = $DEL_LIST
+
+          echo del_name
+          for DEL_NAME in $DEL_LIST; do
+            echo DEL $DEL_NAME;
+            gh release delete-asset -y -R ${{github.repository}} $UNTAG_SIGN $DEL_NAME || echo ‖true-$LINENO;
+          done
+
+          gh release view -R ${{github.repository}} $UNTAG_SIGN --json assets --jq .assets[].name
+        else
+          echo else_clean
+        fi
+
+        echo -End Clean-
+
+    - name: Git clone FC
+      run: |
+        git clone -q --shallow-since=2024-09-01 --recurse-submodules --shallow-submodules https://github.com/FreeCAD/FreeCAD FreeCAD-Z
+
+        cd FreeCAD-Z
+        git config user.name "VM4Dim"
+        git config user.email "vm@git"
+
+        git log --all --graph --date-order --decorate --oneline -16
+        echo ------------------------------------------------------
+        FREECAD_REV=$[$(git rev-list --count 01d9e0c0..origin/main) + 38641 + 78] # +78 since=2024-09-01
+        echo FREECAD_REV = $FREECAD_REV
+        git remote add VM4Dim https://github.com/VM4Dim/FreeCAD
+        git fetch -v --all
+        git switch -t VM4Dim/master-plus
+        echo ------------------------------------------------------
+        git log --all --graph --date-order --decorate --oneline -16
+        echo ------------------------------------------------------
+        git rebase -v origin/main
+        git log --all --graph --date-order --decorate --oneline -16
+        M_PLUS_REV=$(git rev-list --count origin/main..master-plus)
+        echo M_PLUS_REV = $M_PLUS_REV
+
+    - name: End
+      run: |
+        echo =END=
+

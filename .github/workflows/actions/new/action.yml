@@ -1,0 +1,39 @@
+# License: LGPL-2.1
+#
+
+runs:
+  using: composite
+  steps:
+  - shell: bash
+    run: |
+      uname -a
+      df -h -xtmpfs
+      free -h
+
+  - shell: 'bash -e {0}'
+    run: |
+      shopt -s extglob
+      # sudo du -sch /mnt/*
+      # sudo tree -ahC /mnt | zstd -o t-mnt.zst
+      cat /etc/fstab
+      echo ========
+      cat /etc/mtab
+      echo ========
+      mount
+
+  - shell: 'bash -e {0}'
+    name: Env-x
+    env:
+      ENV_ACT: Env-4
+    run:
+      echo ENV_ROOT   = [$ENV_ROOT/${{env.ENV_ROOT}}];
+      echo ENV_JOB    = [$ENV_JOB/${{env.ENV_JOB}}];
+      echo ENV_JOB2   = [$ENV_JOB2/${{env.ENV_JOB2}}];
+      echo ENV_SUBJOB = [$ENV_SUBJOB/${{env.ENV_SUBJOB}}];
+      echo ENV_ACT    = [$ENV_ACT/${{env.ENV_ACT}}];
+
+#  - uses: actions/upload-artifact@v7
+#    with:
+#      compression-level: 0
+#      name: t-mnt.zst
+#      path: t-mnt.zst

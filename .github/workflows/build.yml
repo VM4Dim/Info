@@ -1,0 +1,968 @@
+# License: LGPL-2.1
+#
+
+name: Master Build
+
+on:
+#  push:
+  workflow_dispatch:
+    inputs:
+      test1:
+        default: test-11
+      test2:
+        default:
+  schedule:
+  - cron: "47 23,11 * * *"
+
+env:
+  TEST1: ${{ inputs.test1 }}
+  TEST2: ${{ inputs.test2 }}
+  TEST3: ${{ inputs.test3 }}
+
+  UNTAG_CONFIG: untagged-9de429c31cbb590f5fe5
+
+  ENV_ROOT: Env-1
+
+jobs:
+
+  Build-2:
+    uses: ./.github/workflows/build-2.yml
+
+############################################################################################################################################################
+
+  Build-OCCT:
+    name: Build occt ${{matrix.build}}
+
+    runs-on: ubuntu-26.04
+
+    permissions:
+      contents: write
+
+    strategy:
+      matrix:
+        build:
+        - Release
+        - RelWithDebInfo
+        comp:
+        - {cc: gcc-16,   cxx: g++-16,     rel-deb: "-O2 -g -gz=zstd -DNDEBUG"}
+#        - {cc: clang-18, cxx: clang++-18, rel-deb: "-O2 -g -gz      -DNDEBUG"}
+
+    env:
+      CMAKE_BUILD_TYPE: ${{matrix.build}}
+
+#      INFO_GIT_DIR: ${{github.workspace}}/info-git
+
+      SOURCE_DIR: ${{github.workspace}}/occt-source
+      BUILD_DIR:  ${{github.workspace}}/occt-build
+
+      CCACHE_DIR: ${{github.workspace}}/occt-ccache
+      CCACHE_COMPRESSLEVEL: 6
+
+      CMAKE_INSTALL_PREFIX: ${{github.workspace}}/occt
+      CMAKE_INSTALL_RPATH: '$ORIGIN/../lib'
+
+      CC:  ${{matrix.comp.cc}}
+      CXX: ${{matrix.comp.cxx}}
+
+      CMAKE_C_FLAGS_RELWITHDEBINFO:   ${{matrix.comp.rel-deb}}
+      CMAKE_CXX_FLAGS_RELWITHDEBINFO: ${{matrix.comp.rel-deb}}
+
+      CMAKE_C_COMPILER_LAUNCHER:   ccache
+      CMAKE_CXX_COMPILER_LAUNCHER: ccache
+
+      LAST_UBUNTU_DIST: stonking
+
+    outputs:
+      OCCT_MASTER_REV: ${{steps.check-rev.outputs.OCCT_MASTER_REV}}
+
+    steps:
+    - name: Start ${{github.event_name}} ${{github.run_number}}.${{github.run_attempt}}
+      run: |
+        mkdir -p $BUILD_DIR
+        echo nproc: $(nproc)
+        uname -a
+        free -h
+        df -Th -xtmpfs
+
+    - name: Git clone OCCT
+      run: |
+        git clone -q --shallow-since=2025-02-01 https://github.com/Open-Cascade-SAS/OCCT $SOURCE_DIR
+        cd $SOURCE_DIR
+
+        git remote set-branches --add origin IR
+
+        git fetch -v
+
+        git switch IR
+        git log --all --graph --date-order --decorate --oneline -12
+
+    - name: Git Reset
+      run: |
+        cd $SOURCE_DIR
+        # git reset --hard 5ce5f2e4d
+        # git reset --hard 519036936
+        git log --all --graph --date-order --decorate --oneline -12
+
+    - name: Check revision
+      id: check-rev
+      run: |
+        cd $SOURCE_DIR
+
+        # V7_7_0 = 6162 2022-11
+        # V7_8_0 = 6279 2023-12-26
+        # V7_9_0 = 6551 2025-02-17
+
+        DIFF_TAG_MASTER=$(git rev-list --count V7_9_0..HEAD)
+        OCCT_MASTER_REV=$[6551 + $DIFF_TAG_MASTER]
+        echo Revision: 6551 + $DIFF_TAG_MASTER = $OCCT_MASTER_REV
+
+        curl -s https://api.github.com/repos/${{github.repository}}/releases/tags/v0 | jq -r .assets[].name | grep occt-r${OCCT_MASTER_REV}-${{matrix.build}}.tzst \
+          && OCCT_NEED_BUILD=NO || OCCT_NEED_BUILD=YES
+
+        echo "OCCT_NEED_BUILD=$OCCT_NEED_BUILD" >> $GITHUB_OUTPUT
+        echo "OCCT_MASTER_REV=$OCCT_MASTER_REV" >> $GITHUB_OUTPUT
+
+        echo ""                                                                                      >> $SOURCE_DIR/adm/cmake/version.cmake
+        echo "if (OCC_VERSION_DEVELOPMENT)"                                                          >> $SOURCE_DIR/adm/cmake/version.cmake
+        echo "    set (OCC_VERSION_DEVELOPMENT \"\${OCC_VERSION_DEVELOPMENT}.r$OCCT_MASTER_REV\" )"  >> $SOURCE_DIR/adm/cmake/version.cmake
+        echo "else ()"                                                                               >> $SOURCE_DIR/adm/cmake/version.cmake
+        echo "    set (OCC_VERSION_DEVELOPMENT \"r$OCCT_MASTER_REV\" )"                              >> $SOURCE_DIR/adm/cmake/version.cmake
+        echo "endif ()"                                                                              >> $SOURCE_DIR/adm/cmake/version.cmake
+
+        cat $SOURCE_DIR/adm/cmake/version.cmake
+
+        git status
+        git diff
+
+    - name: OCCT_MASTER_REV - ${{steps.check-rev.outputs.OCCT_MASTER_REV}} / OCCT_NEED_BUILD - ${{steps.check-rev.outputs.OCCT_NEED_BUILD}}
+      run: |
+        echo ${{steps.check-rev.outputs.OCCT_MASTER_REV}} / ${{steps.check-rev.outputs.OCCT_NEED_BUILD}}
+
+    - name: Apt Set
+      if: ${{steps.check-rev.outputs.OCCT_NEED_BUILD == 'YES'}}
+      run: |
+        echo "deb http://archive.ubuntu.com/ubuntu ${{env.LAST_UBUNTU_DIST}} main restricted universe multiverse" | sudo tee /etc/apt/sources.list.d/plus.list
+        echo "deb http://ftp.debian.org/debian sid main contrib non-free"                                      | sudo tee -a /etc/apt/sources.list.d/plus.list
+        # echo "deb http://ftp.debian.org/debian experimental main contrib non-free"                             | sudo tee -a /etc/apt/sources.list.d/plus.list
+
+        cat <<EOF | sudo tee /etc/apt/preferences.d/plus-pin
+
+        Package: *
+        Pin: release n=${{env.LAST_UBUNTU_DIST}}
+        Pin-Priority: 850
+
+        Package: *
+        Pin: release n=resolute
+        Pin-Priority: 800
+
+        Package: *
+        Pin: release n=sid
+        Pin-Priority: 750
+
+        Package: *
+        Pin: release a=experimental
+        Pin-Priority: 400
+
+        EOF
+
+        wget -O- 'https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x78DBA3BC47EF2265' \
+          | sudo tee /etc/apt/trusted.gpg.d/78DBA3BC47EF2265-Debian-13-trixie.asc > /dev/null
+
+    - name: Apt Update
+      if: ${{steps.check-rev.outputs.OCCT_NEED_BUILD == 'YES'}}
+      run: |
+        sudo apt-get update
+
+    - name: Apt Install
+      if: ${{steps.check-rev.outputs.OCCT_NEED_BUILD == 'YES'}}
+      run: |
+        sudo apt-get install -V  \
+          ccache                           \
+          gcc-16  g++-16  gfortran-16      \
+          binutils                         \
+          libfreetype-dev   libfreetype6   \
+          libfreeimage-dev  libfreeimage3  \
+          tcl-dev tk-dev    tcl tk         \
+          libgl-dev         libgl1         \
+          libeigen3-dev                    \
+          rapidjson-dev
+
+    - name: Apt Clean
+      if: ${{steps.check-rev.outputs.OCCT_NEED_BUILD == 'YES'}}
+      run: |
+        df -h -xtmpfs
+        sudo apt-get clean
+        df -h -xtmpfs
+
+    - name: Restore/Lookup OCCT ccache
+      env:
+        OCCT_MASTER_REV: ${{steps.check-rev.outputs.OCCT_MASTER_REV}}
+      uses: actions/cache/restore@v6
+      with:
+        lookup-only: ${{steps.check-rev.outputs.OCCT_NEED_BUILD == 'NO'}}
+        path: ${{env.CCACHE_DIR}}
+        key: occt-${{env.CC}}-${{matrix.build}}
+
+    - name: Start Stat
+      if: ${{steps.check-rev.outputs.OCCT_NEED_BUILD == 'YES'}}
+      id: Start_Stat
+      run: |
+        ls -alFh .; du -sch *; df -h -xtmpfs;
+        # sudo du -sch /usr/local/share/* /usr/local/lib/*
+        ccache -p; ccache -sx; ccache -z;
+        echo "START_TIMESTAMP=$(date '+%s')" >> $GITHUB_OUTPUT
+
+    - name: CMake
+      if: ${{steps.check-rev.outputs.OCCT_NEED_BUILD == 'YES'}}
+      run: |
+        cmake -S $SOURCE_DIR -B $BUILD_DIR \
+          -DUSE_FREEIMAGE=ON \
+          -DUSE_RAPIDJSON=ON \
+          -DCMAKE_INSTALL_RPATH=$CMAKE_INSTALL_RPATH \
+          -DCMAKE_C_FLAGS_RELWITHDEBINFO="$CMAKE_C_FLAGS_RELWITHDEBINFO" \
+          -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="$CMAKE_CXX_FLAGS_RELWITHDEBINFO" \
+          -DCMAKE_INSTALL_PREFIX=$CMAKE_INSTALL_PREFIX
+
+    - name: Upload CMakeCache.txt
+      if: ${{steps.check-rev.outputs.OCCT_NEED_BUILD == 'YES'}}
+      uses: actions/upload-artifact@v7
+      with:
+        name: occt-CMakeCache-${{env.CC}}-${{matrix.build}}.txt
+        path: ${{env.BUILD_DIR}}/CMakeCache.txt
+
+    - name: CMake --build
+      if: ${{steps.check-rev.outputs.OCCT_NEED_BUILD == 'YES'}}
+      run: |
+        df -h -xtmpfs
+        time cmake --build $BUILD_DIR -j4
+
+    - name: Clean ccache
+      if: ${{steps.check-rev.outputs.OCCT_NEED_BUILD == 'YES'}}
+      env:
+        START_TIMESTAMP: ${{steps.Start_Stat.outputs.START_TIMESTAMP}}
+      run: |
+        ccache -sx
+        #
+        MIN_OLD_CCACHE=$[ 1 + ($(date '+%s') - $START_TIMESTAMP) / 60 ];  echo $MIN_OLD_CCACHE
+        #
+        du -sh $CCACHE_DIR
+        rm -f $(find $CCACHE_DIR -name '*''????????''????????' -mmin +$MIN_OLD_CCACHE);
+        du -sh $CCACHE_DIR
+
+    - name: Save OCCT ccache
+      if: ${{steps.check-rev.outputs.OCCT_NEED_BUILD == 'YES'}}
+      env:
+        OCCT_MASTER_REV: ${{steps.check-rev.outputs.OCCT_MASTER_REV}}
+      uses: actions/cache/save@v6
+      with:
+        path: ${{env.CCACHE_DIR}}
+        key: occt-${{env.CC}}-${{matrix.build}}-${{env.OCCT_MASTER_REV}}-${{github.run_number}}.${{github.run_attempt}}
+
+    - name: CMake --install
+      if: ${{steps.check-rev.outputs.OCCT_NEED_BUILD == 'YES'}}
+      run: |
+        df -h -xtmpfs
+        rm -r $CCACHE_DIR
+        df -h -xtmpfs
+        cmake --install $BUILD_DIR
+
+    - name: Pack result
+      if: ${{steps.check-rev.outputs.OCCT_NEED_BUILD == 'YES'}}
+      env:
+        OCCT_MASTER_REV: ${{steps.check-rev.outputs.OCCT_MASTER_REV}}
+      run: |
+        tar -I 'zstd -15' -cf occt-r${OCCT_MASTER_REV}-${{matrix.build}}.tzst occt
+        du -sh $BUILD_DIR/lin* occt *.tzst
+        df -h -xtmpfs
+
+    - name: Upload occt ${{matrix.build}} artifact
+      if: ${{steps.check-rev.outputs.OCCT_NEED_BUILD == 'YES'}}
+      env:
+        OCCT_MASTER_REV: ${{steps.check-rev.outputs.OCCT_MASTER_REV}}
+      uses: actions/upload-artifact@v7
+      with:
+        compression-level: 0
+        name: occt-r${{env.OCCT_MASTER_REV}}-${{matrix.build}}-${{github.run_number}}.tzst
+        path: occt-r${{env.OCCT_MASTER_REV}}-${{matrix.build}}.tzst
+
+    - name: Upload occt ${{matrix.build}} to Releases
+      if: ${{steps.check-rev.outputs.OCCT_NEED_BUILD == 'YES'}}
+      env:
+        GITHUB_TOKEN: ${{github.token}}
+        OCCT_MASTER_REV: ${{steps.check-rev.outputs.OCCT_MASTER_REV}}
+      run: |
+        echo occt-r${OCCT_MASTER_REV}-${{matrix.build}}.tzst  >  occt-Latest-${{matrix.build}}.txt
+        gh release upload --clobber -R ${{github.repository}} v0 occt-r${OCCT_MASTER_REV}-${{matrix.build}}.tzst
+        gh release upload --clobber -R ${{github.repository}} v0 occt-Latest-${{matrix.build}}.txt
+
+    - name: End Stat
+      if: always()
+      run: |
+        ls -alFh .; du -sch *
+        df -h -xtmpfs
+
+    - name: End
+      run: echo == End ==
+
+#############################################################################################################################################################
+#  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #
+#############################################################################################################################################################
+
+  Build-FC:
+    name: Build fc ${{matrix.build}}
+
+    needs: Build-OCCT
+
+    runs-on: ubuntu-26.04
+
+    permissions:
+      contents: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        build:
+        - Release
+        - RelWithDebInfo
+        comp:
+        - {cc: gcc-16, cxx: g++-16, rel-deb: "-O2 -g -gz=zstd -DNDEBUG"}
+
+    env:
+      CMAKE_BUILD_TYPE: ${{matrix.build}}
+
+      SOURCE_DIR: ${{github.workspace}}/fc-source
+      BUILD_DIR:  ${{github.workspace}}/fc-build
+      CCACHE_DIR: ${{github.workspace}}/fc-ccache
+      CCACHE_COMPRESSLEVEL: 6
+
+      CMAKE_INSTALL_PREFIX: ./fc
+      CMAKE_INSTALL_RPATH: '$ORIGIN/../lib-fc:$ORIGIN/../lib'
+
+      CC:  ${{matrix.comp.cc}}
+      CXX: ${{matrix.comp.cxx}}
+
+      CMAKE_C_FLAGS_RELWITHDEBINFO:   ${{matrix.comp.rel-deb}}
+      CMAKE_CXX_FLAGS_RELWITHDEBINFO: ${{matrix.comp.rel-deb}}
+
+      CMAKE_C_COMPILER_LAUNCHER:   ccache
+      CMAKE_CXX_COMPILER_LAUNCHER: ccache
+
+      OpenCASCADE_DIR: ${{github.workspace}}/occt/lib/cmake/opencascade
+      OCCT_MASTER_REV: ${{needs.Build-OCCT.outputs.OCCT_MASTER_REV}}
+
+      LAST_UBUNTU_DIST: stonking
+
+      FC_PR_MERGE_LIST: ${{vars.PR_MERGE_LIST}}
+
+    steps:
+    - name: Start
+      if: always()
+      run: |
+        mkdir -p $BUILD_DIR
+        echo nproc: $(nproc)
+        uname -a
+        free -h
+        df -Th
+
+    - name: Download occt ${{env.OCCT_MASTER_REV}} ${{matrix.build}} from Releases
+      run: |
+        wget -nv https://github.com/${{github.repository}}/releases/download/v0/occt-r${OCCT_MASTER_REV}-${{matrix.build}}.tzst
+        tar -xf occt-r${OCCT_MASTER_REV}-${{matrix.build}}.tzst
+        ls -alFh occt*
+        du -sch occt*
+        rm occt-r${OCCT_MASTER_REV}-${{matrix.build}}.tzst
+
+    - name: Apt Set
+      run: |
+        # echo 'APT::Default-Release "stonking";' | sudo tee /etc/apt/apt.conf.d/Default-Release
+
+        echo "deb http://archive.ubuntu.com/ubuntu stonking           main restricted universe multiverse"  | sudo tee    /etc/apt/sources.list.d/plus.list
+        echo "deb http://archive.ubuntu.com/ubuntu stonking-proposed  main restricted universe multiverse"  | sudo tee -a /etc/apt/sources.list.d/plus.list
+        # echo "deb http://ftp.debian.org/debian sid           main contrib non-free"                         | sudo tee -a /etc/apt/sources.list.d/plus.list
+        # echo "deb http://ftp.debian.org/debian experimental  main contrib non-free"                         | sudo tee -a /etc/apt/sources.list.d/plus.list
+
+        cat <<EOF | sudo tee /etc/apt/preferences.d/plus-pin
+
+        Package: *
+        Pin: release n=stonking
+        Pin-Priority: 850
+
+        Package: *
+        Pin: release n=resolute
+        Pin-Priority: 800
+
+        Package: *
+        Pin: release n=sid
+        Pin-Priority: 750
+
+        Package: *
+        Pin: release a=experimental
+        Pin-Priority: 400
+
+        EOF
+
+        wget -O- 'https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x78DBA3BC47EF2265' \
+          | sudo tee /etc/apt/trusted.gpg.d/78DBA3BC47EF2265-Debian-13-trixie.asc > /dev/null
+
+    - name: Apt Update
+      run: |
+        sudo apt-get update
+
+#    - name: Apt Upgrade
+#      run: |
+#        sudo apt-get upgrade
+
+    - name: Apt Install
+      run: |
+        sudo apt-get install -V \
+          ccache                        \
+          cmake                         \
+          gcc-16  g++-16  gfortran-16   \
+          binutils                      \
+          libicu-dev                    \
+          libfmt-dev                    \
+          libpyside6-dev                \
+          libshiboken6-dev              \
+          qt6-tools-dev                 \
+          qt6-svg-dev                   \
+          python3-pyside6.qtwidgets     \
+          python3-pyside6.qtsvgwidgets  \
+          python3-pyside6.qtnetwork     \
+          python3-defusedxml            \
+          python3-pybind11              \
+          libyaml-cpp-dev               \
+          libxerces-c-dev               \
+          libboost-filesystem-dev       \
+          libboost-regex-dev            \
+          libboost-program-options-dev  \
+          libboost-thread-dev           \
+          libmedc-dev                   \
+          python3-lark                  \
+          libfreeimage-dev              \
+          libfreetype-dev               \
+          libharfbuzz-dev               \
+          libgtest-dev  libgmock-dev    \
+          squashfs-tools                \
+          rdiff  xxhash                 \
+          swig                          \
+          libvtk9-dev
+
+#    - name: Apt Install /Sid
+#      run: |
+#        sudo apt-get install -V -t=sid --allow-downgrades  \
+#          libvtk9-dev
+
+    - name: Apt Clean
+      run: |
+        df -h -xtmpfs
+        sudo apt-get clean
+        rm -r /opt/hostedtoolcache/CodeQL
+        rm -r /opt/hostedtoolcache/go
+        # sudo rm -r /usr/local/lib/android
+        sudo rm -r /usr/local/share/powershell
+        df -h -xtmpfs
+
+    - name: Git clone FC
+      id: Git_Clone_FC
+      run: |
+        git clone -q --shallow-since=2024-09-01 --recurse-submodules --shallow-submodules https://github.com/FreeCAD/FreeCAD $SOURCE_DIR
+
+        cd $SOURCE_DIR
+
+        git config user.name "VM4Dim"
+        git config user.email "vm@git"
+
+        git log --all --graph --date-order --decorate --oneline -16
+        echo ----------------------------------------------------------
+        FREECAD_REV=$[$(git rev-list --count 01d9e0c0..origin/main) + 38641 + 78] # +78 since=2024-09-01
+        echo "FREECAD_REV=$FREECAD_REV" >> $GITHUB_OUTPUT
+        echo FREECAD_REV = $FREECAD_REV
+
+        git remote add VM4Dim https://github.com/VM4Dim/FreeCAD
+        git fetch -v --all
+        git switch -t VM4Dim/master-plus
+        echo ----------------------------------------------------------
+        git log --all --graph --date-order --decorate --oneline -16
+        echo ----------------------------------------------------------
+        git rebase -v origin/main
+        git log --all --graph --date-order --decorate --oneline -16
+        echo ----------------------------------------------------------
+
+        M_PLUS_REV=$(git rev-list --count origin/main..master-plus)
+        echo "M_PLUS_REV=$M_PLUS_REV" >> $GITHUB_OUTPUT
+        echo M_PLUS_REV = $M_PLUS_REV
+
+        ##  Git Reset
+        # git reset --hard 2745f436 # 40176
+        # git reset --hard 516595fb # 40182
+        # git reset --hard de9bd5e1 # change MIN_boost_version
+
+        #  git config --add remote.origin.fetch '+refs/pull/31143/*:refs/remotes/origin/pull/31143/*'
+        #  echo ----------------------------------------------------------
+        #  cat .git/config
+        #  echo ----------------------------------------------------------
+        #  git fetch -v --all --recurse-submodules=on-demand --force
+        #  git submodule update --init --remote --force
+        #  # git reset --hard origin/pull/31143/head
+        #  git switch --recurse-submodules origin/pull/31143/merge
+        #  git log --all --graph --date-order --decorate --oneline -16
+        #  echo ----------------------------------------------------------
+
+    - name: Fix Ref-Revision ${{env.FREECAD_REV}}
+      env:
+        FREECAD_REV: ${{steps.Git_Clone_FC.outputs.FREECAD_REV}}
+      run: |
+        cd $SOURCE_DIR
+        sed -e 's|referencecommit = "7d8e53aaab17961d85c5009de34f69f2af084e8b"|referencecommit = "01d9e0c0"|' \
+            -e 's|referencerevision = 14555|referencerevision = 38641 + 78|' \
+            -i src/Tools/SubWCRev.py
+
+        find src/{App,Base}/Resources -type f -exec touch -t 197001010000 {} \;
+        find src/Gui/{Icons,Language} -type f -exec touch -t 197001010000 {} \;
+        touch -t 197001010000 PRIVACY_POLICY.md
+        touch -t 197001010000 src/Doc/CONTRIBUTORS
+        find src/Mod/*/Gui/Resources -type f -exec touch -t 197001010000 {} \;
+        find src/Mod/{AddonManager,BIM,Draft,Help,OpenSCAD,Tux}/Resources -type f -exec touch -t 197001010000 {} \;
+
+        sudo sed \
+           -e 's|/usr/typesystems|/usr/share/PySide6/typesystems|' \
+           -e 's|/usr/glue|/usr/share/PySide6/glue|' \
+           -i /usr/lib/x86_64-linux-gnu/cmake/PySide6/PySide6Config.abi3.cmake
+
+        sudo sed \
+           -e 's|{_IMPORT_PREFIX}/PySide6/include|{_IMPORT_PREFIX}/../include/PySide6|' \
+           -i /usr/lib/x86_64-linux-gnu/cmake/PySide6/PySide6Targets.cmake
+
+        sudo sed \
+           -e 's|{_IMPORT_PREFIX}/shiboken6/include|{_IMPORT_PREFIX}/../include/shiboken6|' \
+           -i /usr/lib/x86_64-linux-gnu/cmake/Shiboken6/Shiboken6Targets.cmake
+
+        git status
+        git diff
+
+    - name: Restore FC ccache
+      uses: actions/cache/restore@v6
+      with:
+        path: ${{env.CCACHE_DIR}}
+        key: FC-${{env.CC}}-${{matrix.build}}
+
+    - name: Start Stat
+      id: Start_Stat
+      run: |
+        ls -alFh .; du -sch *; df -h -xtmpfs
+        ccache -sx; ccache -z;
+        echo "START_TIMESTAMP=$(date '+%s')" >> $GITHUB_OUTPUT
+
+        gcc --version; g++ --version;
+        cc  --version; c++ --version;
+        gcc-15 --version || echo NO GCC-15
+        gcc-16 --version || echo NO GCC-16
+        gcc-17 --version || echo NO GCC-17
+
+    - name: CMake
+      run: |
+        cmake -S $SOURCE_DIR -B $BUILD_DIR \
+          -DCMAKE_INSTALL_RPATH=$CMAKE_INSTALL_RPATH -DINSTALL_TO_SITEPACKAGES=OFF \
+          -DCMAKE_INSTALL_LIBDIR=lib-fc -DOpenCASCADE_DIR=$OpenCASCADE_DIR \
+          -DFREECAD_USE_PCL=OFF
+
+    - name: Upload CMakeCache.txt
+      uses: actions/upload-artifact@v7
+      if: always()
+      with:
+        name: fc-CMakeCache-${{env.CC}}-${{matrix.build}}.txt
+        path: ${{env.BUILD_DIR}}/CMakeCache.txt
+
+    - name: Fix Resources .qm date-time
+      run: |
+        cd $BUILD_DIR
+        sed 's|/usr/lib/qt6/libexec/rcc --| find Resources -type f -exec touch -t 197001010000 {} \\; \&\& &|' \
+          -i src/Mod/{Assembly,Fem,Material,Measure,Mesh,MeshPart,Part,PartDesign,CAM,Points,Test,ReverseEngineering,Robot,Sketcher,Spreadsheet,Start,TechDraw}/Gui/CMakeFiles/*Gui.dir/build.make \
+             src/{App,Base}/CMakeFiles/FreeCAD*.dir/build.make
+        sed 's|/usr/lib/qt6/libexec/rcc --| find Language  -type f -exec touch -t 197001010000 {} \\; \&\& &|' \
+          -i src/Gui/CMakeFiles/FreeCADGui.dir/build.make
+
+    - name: CMake --build
+      run: |
+        df -h -xtmpfs
+        time cmake --build $BUILD_DIR -j4
+
+    - name: Clean ccache
+      env:
+        START_TIMESTAMP: ${{steps.Start_Stat.outputs.START_TIMESTAMP}}
+      run: |
+        ccache -sx
+
+        MIN_OLD_CCACHE=$[ 1 + ($(date '+%s') - $START_TIMESTAMP) / 60 ]; echo $MIN_OLD_CCACHE
+
+        du -sh $CCACHE_DIR
+        rm -f $(find $CCACHE_DIR -name '*''????????''????????' -mmin +$MIN_OLD_CCACHE);
+        du -sh $CCACHE_DIR
+
+    - name: Lookup OCCT ccache
+      uses: actions/cache/restore@v6
+      with:
+        lookup-only: true
+        path: ${{github.workspace}}/occt-ccache
+        key: occt-${{env.CC}}-${{matrix.build}}
+
+    - name: Save FC ccache
+      env:
+        FREECAD_REV: ${{steps.Git_Clone_FC.outputs.FREECAD_REV}}
+      uses: actions/cache/save@v6
+      with:
+        path: ${{env.CCACHE_DIR}}
+        key: FC-${{env.CC}}-${{matrix.build}}-Dev-${{env.FREECAD_REV}}-${{github.run_number}}.${{github.run_attempt}}
+
+    - name: CMake --install
+      run: |
+        df -h -xtmpfs
+        rm -r $CCACHE_DIR
+        df -h -xtmpfs
+        cmake --install $BUILD_DIR
+
+    - name: Load Env
+      run: |
+        mkdir inst-env
+        cd inst-env
+
+        apt-get download  libqt6{core6t64,gui6,network6,widgets6,dbus6,svg6,svgwidgets6,opengl6,openglwidgets6,printsupport6,uitools6,xml6}
+        apt-get download  qt6-qpa-plugins qt6-wayland qt6-svg-plugins libcoin80t64 libsoqt620
+        apt-get download  libfreeimage3 libfreeimageplus3 libjpeg8 libpng16-16t64 libopenexr-3-4-33 libtiff6 libraw23t64 libwebp7 libopenjp2-7
+        apt-get download  libfreetype6 libfontconfig1 libgraphite2-3 libbrotli1 libharfbuzz0b
+        apt-get download  python3.14-minimal libpython3.14{,-minimal,-stdlib} libpyside6-py3-6.10 libshiboken6-py3-6.10
+        apt-get download  python3-pyside6.qt{core,gui,network,svg,svgwidgets,uitools,widgets,xml}
+        apt-get download  python3-pivy python3-numpy python3-ply python3-packaging python3-yaml libyaml-0-2 python3-lark python3-defusedxml
+        apt-get download  python3-matplotlib python-matplotlib-data python3-pil python3-pyparsing python3-cycler python3-dateutil python3-kiwisolver
+        apt-get download  libicu78 libpcre2-posix3 libpcre2-8-0 libpcre2-16-0 libpcre2-32-0 libfmt10 libxerces-c3.2t64 libexpat1 libffi8 libxml2-16
+        apt-get download  libboost-program-options1.90.0 libboost-thread1.90.0 libkeyutils1 python3-typing-extensions
+        apt-get download  vtk9 libvtk9.6 libvtk9.6-qt python3-vtk9 paraview python3-paraview
+        apt-get download  libdeflate0 libbz2-1.0 liblzma5 zlib1g libzstd1 libdouble-conversion3
+        apt-get download  libyaml-cpp0.9 jq libjq1 rdiff librsync2t64 libb2-1 xxhash libxxhash0 libedit2 liblerc4
+        apt-get download  libx11-6 libx11-xcb1 libxcb1 libxau6 libxdmcp6 libdrm2 libdrm-amdgpu1 libdrm-intel1 libxext6 libxxf86vm1 libxshmfence1 \
+          libxcb-dri3-0 libxcb-glx0 \
+          libgl1 libegl1 libopengl0 libglvnd0 libglx0 libegl-mesa0 libglx-mesa0 libgl1-mesa-dri mesa-libgallium libgbm1 libvulkan1 \
+          libllvm21 libxcb-present0 libxcb-shm0 libxcb-xfixes0 libxcb-sync1 libxcb-cursor0 libxcb-image0 libxcb-randr0 libxcb-render0 libxcb-render-util0 \
+          libxcb-util1 libxcb-keysyms1 libxcb-icccm4 libxcb-shape0 libxcb-xinerama0 libxcb-xinput0 libxcb-xkb1 libxkbcommon0 libxkbcommon-x11-0 \
+          libglib2.0-0t64 libblas3 liblapack3 libunistring5
+
+        for DEB in *.deb; do dpkg-deb -x $DEB EXTR; done
+
+        cd EXTR/usr
+        patchelf --set-rpath '$ORIGIN'          lib/x86_64-linux-gnu/*.so*
+        patchelf --set-rpath '$ORIGIN/../../..' lib/x86_64-linux-gnu/qt6/plugins/*/lib*.so
+        patchelf --set-rpath '$ORIGIN/../lib'   bin/python3.14
+        patchelf --set-rpath '$ORIGIN/../..'    lib/python3.14/lib-dynload/*.so
+        patchelf --set-rpath '$ORIGIN/../../..'    lib/python3/dist-packages/*/*.so*
+        patchelf --set-rpath '$ORIGIN/../../../..' lib/python3/dist-packages/*/*/*.so*
+        cd ../../..
+
+        cp -r -t fc occt/*
+
+        mv -t fc/bin inst-env/EXTR/usr/bin/python3*
+        mv -t fc/lib inst-env/EXTR/usr/lib/python3*
+        mv -t fc/lib inst-env/EXTR/usr/lib/x86_64-linux-gnu/*
+
+        mv -t fc/lib/python3/dist-packages/matplotlib inst-env/EXTR/usr/share/matplotlib/mpl-data
+
+        sed -e "s|'/etc/matplotlibrc'|os.path.join(get_data_path(), 'matplotlibrc')|" \
+          -i fc/lib/python3/dist-packages/matplotlib/__init__.py
+
+        du -sch  inst-env/EXTR/*
+        du -sch  inst-env/EXTR/usr/*
+        du -sch  inst-env/EXTR/usr/share/*
+        ls -alFh inst-env/EXTR/usr/bin
+        mv -t fc inst-env/EXTR
+
+        echo "include-system-site-packages = false" > fc/pyvenv.cfg
+        echo "[Paths]"                      > fc/bin/qt6.conf
+        echo "Prefix    = .."              >> fc/bin/qt6.conf
+        echo "Libraries = lib"             >> fc/bin/qt6.conf
+        echo "Plugins   = lib/qt6/plugins" >> fc/bin/qt6.conf
+
+    - name: Pack result
+      run: |
+        time mksquashfs fc fc-${{github.run_number}}-${{matrix.build}}.sqsh \
+          -keep-as-directory -root-owned -no-exports -mkfs-time 0 -all-time 0 -comp zstd -Xcompression-level 15 -b 256K
+        du -sh fc occt *.sqsh
+        df -h -xtmpfs
+
+    - name: Upload artifact .sqsh
+      uses: actions/upload-artifact@v7
+      with:
+        compression-level: 0
+        name: fc-${{github.run_number}}-${{matrix.build}}.sqsh
+        path: fc-${{github.run_number}}-${{matrix.build}}.sqsh
+
+    - name: Upload Releases .sqsh
+      env:
+        GITHUB_TOKEN: ${{github.token}}
+        FREECAD_REV: ${{steps.Git_Clone_FC.outputs.FREECAD_REV}}
+      run: |
+        echo "fc-${{github.run_number}}-${{matrix.build}}.sqsh > fc-Latest-${{matrix.build}}.txt"
+        echo  fc-${{github.run_number}}-${{matrix.build}}.sqsh > fc-Latest-${{matrix.build}}.txt
+        gh release upload --clobber -R ${{github.repository}} v0 fc-${{github.run_number}}-${{matrix.build}}.sqsh || echo ‖OR_True-$LINENO
+        gh release upload --clobber -R ${{github.repository}} v0 fc-Latest-${{matrix.build}}.txt || echo ‖OR_True-$LINENO
+
+        # gh release view -R ${{github.repository}} v0 --json assets || true
+        gh release view -R ${{github.repository}} v0 --json assets --jq .assets[].name  || echo ‖OR_True-$LINENO
+
+        [ $[ (${{github.run_number}} - 5) % 20 ] -ne 0 ] && echo DEL fc-$[ ${{github.run_number}} - 5 ]-${{matrix.build}}.sqsh \
+          && gh release delete-asset -y -R ${{github.repository}} v0 fc-$[ ${{github.run_number}} - 5 ]-${{matrix.build}}.sqsh || echo ‖OR_True-$LINENO
+
+    - name: Upload Releases Delta
+      if: ${{matrix.build == 'Release'}}
+      env:
+        GITHUB_TOKEN: ${{github.token}}
+        FREECAD_REV: ${{steps.Git_Clone_FC.outputs.FREECAD_REV}}
+      run: |
+        # gh release list -R ${{github.repository}}
+        # gh release list -R VM4Dim/FreeCAD
+
+        FC_BUILD_REV=${FREECAD_REV}
+        FC_BUILD_DATE_TIME=$(date -u '+%y%m%d.%H%M')
+        FC_BUILD_DATE=$(echo $FC_BUILD_DATE_TIME | grep -o '......')
+        FC_BUILD_DATE2=$(echo $FC_BUILD_DATE_TIME | sed -E 's/^(..)(..)(..)\.(..)(..)$/\1-\2-\3/')
+
+        echo FC_BUILD_DATE_TIME = ${FC_BUILD_DATE_TIME} / date = $(date '+%Y-%m-%d_%H%M%S') / date -u = $(date -u '+%Y-%m-%d_%H%M%S')
+
+        ln -s fc-${{github.run_number}}-${{matrix.build}}.sqsh FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage
+
+        gh release download -R ${{github.repository}} $UNTAG_CONFIG -p untag_rel.txt   || echo ‖OR_True-$LINENO
+        UNTAG_REL=$(cat untag_rel.txt)
+
+        gh release download -R ${{github.repository}} $UNTAG_CONFIG -p untag_sign.txt  || echo ‖OR_True-$LINENO
+        UNTAG_SIGN=$(cat untag_sign.txt)
+
+        gh release download -R ${{github.repository}} $UNTAG_CONFIG -p untag_daily.txt || echo ‖OR_True-$LINENO
+        UNTAG_DAILY=$(cat untag_daily.txt)
+
+        gh release download -R ${{github.repository}} $UNTAG_CONFIG -p untag_delta.txt || echo ‖OR_True-$LINENO
+        UNTAG_DELTA=$(cat untag_delta.txt)
+
+        gh release upload --clobber -R ${{github.repository}} $UNTAG_DAILY \
+          "FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage#"\
+        ``"FreeCåD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE2}.AppImage" || echo ‖OR_True-$LINENO
+
+        rdiff -b1024 signature FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage.sign
+        gh release upload -R ${{github.repository}} $UNTAG_SIGN FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage.sign
+
+        gh release download -R ${{github.repository}} $UNTAG_SIGN -p FC-Rev-List.txt || echo ‖OR_True-$LINENO
+        echo Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME} >> FC-Rev-List.txt
+        gh release upload --clobber -R ${{github.repository}} $UNTAG_SIGN FC-Rev-List.txt
+        echo "Update: FC-Rev-List.txt"
+
+        echo -------
+
+        gh release download -R ${{github.repository}} $UNTAG_DAILY -p FreeCaD-x64-Dev-Daily.AppImage.txt || echo ‖OR_True-$LINENO
+
+        if [ -f FreeCaD-x64-Dev-Daily.AppImage.txt ]; then
+            FC_DPREV=$(cat FreeCaD-x64-Dev-Daily.AppImage.txt)
+            FC_DPREV_REV=$(       echo $FC_DPREV | sed -E 's/^FreeCaD-x64-Dev.R(.+)\.20(......)\.(....)\.AppImage$/\1/'    )
+            FC_DPREV_DATE=$(      echo $FC_DPREV | sed -E 's/^FreeCaD-x64-Dev.R(.+)\.20(......)\.(....)\.AppImage$/\2/'    )
+            FC_DPREV_DATE_TIME=$( echo $FC_DPREV | sed -E 's/^FreeCaD-x64-Dev.R(.+)\.20(......)\.(....)\.AppImage$/\2.\3/' )
+
+            echo FC_DPREV = $FC_DPREV / _REV = $FC_DPREV_REV / _DATE = $FC_DPREV_DATE / _DATE_TIME = $FC_DPREV_DATE_TIME
+
+            if [[ $FC_DPREV_DATE != $FC_BUILD_DATE ]]; then
+                gh release download -R ${{github.repository}} $UNTAG_SIGN -p $FC_DPREV.sign || echo ‖OR_True-$LINENO
+
+                if [ -f $FC_DPREV.sign ]; then
+                    rdiff delta $FC_DPREV.sign FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage \
+                      FreeCaD-x64-Dev.R${FC_DPREV_REV}.20${FC_DPREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppDelta
+
+                    echo >> \
+                      FreeCaD-x64-Dev.R${FC_DPREV_REV}.20${FC_DPREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppDelta
+
+                    xxh128sum FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage | head -c 32 >> \
+                      FreeCaD-x64-Dev.R${FC_DPREV_REV}.20${FC_DPREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppDelta
+
+                    gh release upload --clobber -R ${{github.repository}} $UNTAG_DELTA \
+                      "FreeCaD-x64-Dev.R${FC_DPREV_REV}.20${FC_DPREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppDelta#"\
+        `            `"FreeCåD-x64-Dev R${FC_DPREV_REV}.${FC_DPREV_DATE:2} ‣ R${FC_BUILD_REV}.${FC_BUILD_DATE:2}.AppDelta" || echo ‖OR_True-$LINENO
+
+                    ln -s FreeCaD-x64-Dev.R${FC_DPREV_REV}.20${FC_DPREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppDelta \
+                               FC-x64-Dev.R${FC_DPREV_REV}.20${FC_DPREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AIDelta
+
+                    gh release upload --clobber -R ${{github.repository}} v0.0 \
+                               FC-x64-Dev.R${FC_DPREV_REV}.20${FC_DPREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AIDelta || echo ‖OR_True-$LINENO
+
+                    echo "Upload: FC-x64-Dev.R${FC_DPREV_REV}.20${FC_DPREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AIDelta"
+                fi
+
+                echo "Update: FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage > FreeCaD-x64-Dev-Daily.AppImage.txt"
+                echo          FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage > FreeCaD-x64-Dev-Daily.AppImage.txt
+                gh release upload --clobber -R ${{github.repository}} $UNTAG_DAILY FreeCaD-x64-Dev-Daily.AppImage.txt
+            fi
+        else
+            echo "Create: FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage > FreeCaD-x64-Dev-Daily.AppImage.txt"
+            echo          FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage > FreeCaD-x64-Dev-Daily.AppImage.txt
+            gh release upload --clobber -R ${{github.repository}} $UNTAG_DAILY FreeCaD-x64-Dev-Daily.AppImage.txt
+        fi
+
+        #### if [[ ${{github.event_name}} == 'schedule' && $FC_PREV_DATE != $FC_BUILD_DATE ]]; then
+
+        echo -------
+
+        gh release download -R ${{github.repository}} $UNTAG_DAILY -p FreeCaD-x64-Dev-Latest.AppImage.txt || echo ‖OR_True-$LINENO
+
+        if [ -f FreeCaD-x64-Dev-Latest.AppImage.txt ]; then
+            FC_PREV=$(cat FreeCaD-x64-Dev-Latest.AppImage.txt)
+            FC_PREV_REV=$(       echo $FC_PREV | sed -E 's/^FreeCaD-x64-Dev.R(.+)\.20(......)\.(....)\.AppImage$/\1/'    )
+            FC_PREV_DATE=$(      echo $FC_PREV | sed -E 's/^FreeCaD-x64-Dev.R(.+)\.20(......)\.(....)\.AppImage$/\2/'    )
+            FC_PREV_DATE_TIME=$( echo $FC_PREV | sed -E 's/^FreeCaD-x64-Dev.R(.+)\.20(......)\.(....)\.AppImage$/\2.\3/' )
+
+            echo FC_PREV = $FC_PREV / _REV = $FC_PREV_REV / _DATE = $FC_PREV_DATE / _DATE_TIME = $FC_PREV_DATE_TIME
+
+            gh release download -R ${{github.repository}} $UNTAG_SIGN -p $FC_PREV.sign || echo ‖OR_True-$LINENO
+
+            #[ ! -f $FC_PREV.sign ] \
+            #    && gh release download -R ${{github.repository}} $UNTAG_DAILY -p $FC_PREV \
+            #    && rdiff -b1024 signature $FC_PREV $FC_PREV.sign || echo ‖OR_True-$LINENO
+
+            if [ -f $FC_PREV.sign ]; then
+
+                rdiff delta $FC_PREV.sign FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage \
+                  FreeCaD-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppDelta
+
+                echo >> \
+                  FreeCaD-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppDelta
+
+                xxh128sum FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage | head -c 32 >> \
+                  FreeCaD-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppDelta
+
+                gh release upload --clobber -R ${{github.repository}} $UNTAG_DELTA \
+                  "FreeCaD-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppDelta#"\
+        `        `"FreeCåD-x64-Dev R${FC_PREV_REV}.${FC_PREV_DATE:2} ‣ R${FC_BUILD_REV}.${FC_BUILD_DATE:2}.AppDelta" || echo ‖OR_True-$LINENO
+
+                ln -s FreeCaD-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppDelta \
+                           FC-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AIDelta
+
+                gh release upload --clobber -R ${{github.repository}} v0.0 \
+                           FC-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AIDelta || echo ‖OR_True-$LINENO
+
+                echo "Upload: FC-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AIDelta"
+
+                echo "Update: FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage > FreeCaD-x64-Dev-Latest.AppImage.txt"
+                echo          FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage > FreeCaD-x64-Dev-Latest.AppImage.txt
+                gh release upload --clobber -R ${{github.repository}} $UNTAG_DAILY FreeCaD-x64-Dev-Latest.AppImage.txt
+            fi
+        else
+            echo "Create: FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage > FreeCaD-x64-Dev-Latest.AppImage.txt"
+            echo          FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage > FreeCaD-x64-Dev-Latest.AppImage.txt
+            gh release upload --clobber -R ${{github.repository}} $UNTAG_DAILY FreeCaD-x64-Dev-Latest.AppImage.txt
+        fi
+
+        echo "\$${{'{{github.event_name}}'}} = ${{github.event_name}}" \
+            " / \$FC_DPREV_DATE = $FC_DPREV_DATE / \$FC_PREV_DATE = $FC_PREV_DATE / \$FC_BUILD_DATE = $FC_BUILD_DATE"
+
+
+        # NEW_UNTAG_SIGN_URL=$(gh release edit -R ${{github.repository}} $UNTAG_SIGN --draft --notes "")   || echo ‖OR_True-$LINENO;
+        # UNTAG_SIGN=${NEW_UNTAG_SIGN_URL:(-29)}; echo $UNTAG_SIGN > untag_sign.txt
+        # echo NEW_UNTAG_SIGN_URL = $NEW_UNTAG_SIGN_URL / UNTAG_SIGN = $UNTAG_SIGN
+        # gh release upload --clobber -R ${{github.repository}} $UNTAG_CONFIG untag_sign.txt  || echo ‖OR_True-$LINENO
+
+        # NEW_UNTAG_DAILY_URL=$(gh release edit -R ${{github.repository}} $UNTAG_DAILY --draft --notes "") || echo ‖OR_True-$LINENO;
+        # UNTAG_DAILY=${NEW_UNTAG_DAILY_URL:(-29)}; echo $UNTAG_DAILY > untag_daily.txt
+        # echo NEW_UNTAG_DAILY_URL = $NEW_UNTAG_DAILY_URL / UNTAG_DAILY = $UNTAG_DAILY
+        # gh release upload --clobber -R ${{github.repository}} $UNTAG_CONFIG untag_daily.txt || echo ‖OR_True-$LINENO
+
+        # NEW_UNTAG_DELTA_URL=$(gh release edit -R ${{github.repository}} $UNTAG_DELTA --draft --notes "") || echo ‖OR_True-$LINENO;
+        # UNTAG_DELTA=${NEW_UNTAG_DELTA_URL:(-29)}; echo $UNTAG_DELTA > untag_delta.txt
+        # echo NEW_UNTAG_DELTA_URL = $NEW_UNTAG_DELTA_URL / UNTAG_DELTA = $UNTAG_DELTA
+        # gh release upload --clobber -R ${{github.repository}} $UNTAG_CONFIG untag_delta.txt || echo ‖OR_True-$LINENO
+
+
+        NEW_UNTAG_REL_URL=$(gh release edit -R ${{github.repository}} $UNTAG_REL --draft --notes \
+          "- [x] [**FreeCåD-x64-Dev-Latest.AppImage**]"\
+        ``"(https://github.com/${{github.repository}}/releases/download/$UNTAG_DAILY/FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage)") \
+          || echo ‖OR_True-$LINENO;
+        UNTAG_REL=${NEW_UNTAG_REL_URL:(-29)}; echo $UNTAG_REL > untag_rel.txt
+        echo NEW_UNTAG_REL_URL = $NEW_UNTAG_REL_URL / UNTAG_REL = $UNTAG_REL
+        gh release upload --clobber -R ${{github.repository}} $UNTAG_CONFIG untag_rel.txt || echo ‖OR_True-$LINENO
+
+        echo ==================================================
+
+        gh release view -R ${{github.repository}} $UNTAG_REL   --json body || echo ‖OR_True-$LINENO;
+        gh release view -R ${{github.repository}} $UNTAG_SIGN  --json body || echo ‖OR_True-$LINENO;
+        gh release view -R ${{github.repository}} $UNTAG_DAILY --json body || echo ‖OR_True-$LINENO;
+        gh release view -R ${{github.repository}} $UNTAG_DELTA --json body || echo ‖OR_True-$LINENO;
+
+        echo ==== CLEAN SIGN ==============================================
+
+        CLEAN_DATE=$(date -u --date="-5 day" "+%Y%m%d")
+        echo CLEAN_DATE = ${CLEAN_DATE} ${CLEAN_DATE:6}
+
+        gh release view -R ${{github.repository}} $UNTAG_SIGN --json assets --jq .assets[].name || echo ‖OR_True-$LINENO
+
+        DEL_LIST_S=$(gh release view -R ${{github.repository}} $UNTAG_SIGN --json assets --jq .assets[].name \
+          | grep -E "FreeCaD-x64-Dev.R.+\.${CLEAN_DATE}\..+\.AppImage.sign") || echo ‖OR_True-$LINENO
+        echo DEL_LIST_S = $DEL_LIST_S
+
+        for DEL_NAME in $DEL_LIST_S; do
+          echo DEL $DEL_NAME;
+          gh release delete-asset -y -R ${{github.repository}} $UNTAG_SIGN $DEL_NAME || echo ‖OR_True-$LINENO;
+        done
+
+        gh release view -R ${{github.repository}} $UNTAG_SIGN --json assets --jq .assets[].name || echo ‖OR_True-$LINENO
+
+        echo ===== CLEAN AI =============================================
+
+        if [[ ${CLEAN_DATE:7} == 5 ]]; then
+          DEL_LIST_AI=$(gh release view -R ${{github.repository}} $UNTAG_DAILY --json assets --jq .assets[].name \
+            | grep -E "FreeCaD-x64-Dev.R.+\.${CLEAN_DATE}\..+\.AppImage" | sort | tail -n+2) || echo ‖OR_True-$LINENO
+        else
+          DEL_LIST_AI=$(gh release view -R ${{github.repository}} $UNTAG_DAILY --json assets --jq .assets[].name \
+            | grep -E "FreeCaD-x64-Dev.R.+\.${CLEAN_DATE}\..+\.AppImage") || echo ‖OR_True-$LINENO
+        fi
+        echo DEL_LIST_AI = $DEL_LIST_AI
+
+        for DEL_NAME in $DEL_LIST_AI; do
+          echo DEL $DEL_NAME;
+          gh release delete-asset -y -R ${{github.repository}} $UNTAG_DAILY $DEL_NAME || echo ‖OR_True-$LINENO;
+        done
+
+        gh release view -R ${{github.repository}} $UNTAG_DAILY --json assets --jq .assets[].name || echo ‖OR_True-$LINENO
+
+        echo ===== CLEAN DELTA =============================================
+
+        DEL_LIST_AD=$(gh release view -R ${{github.repository}} $UNTAG_DELTA --json assets --jq .assets[].name \
+          | grep -E "FreeCaD-x64-Dev.R.+\.${CLEAN_DATE}\..+_R.+\.${CLEAN_DATE}\..+\.AppDelta") || echo ‖OR_True-$LINENO
+        echo DEL_LIST_AD = $DEL_LIST_AD
+
+        for DEL_NAME in $DEL_LIST_AD; do
+          echo DEL $DEL_NAME;
+          gh release delete-asset -y -R ${{github.repository}} $UNTAG_DELTA $DEL_NAME || echo ‖OR_True-$LINENO;
+        done
+
+        echo ===== CLEAN DELTA v0.0 =============================================
+
+        DEL_LIST_AD=$(gh release view -R ${{github.repository}} v0.0 --json assets --jq .assets[].name \
+          | grep -E "FreeCaD-x64-Dev.R.+\.${CLEAN_DATE}\..+_R.+\.${CLEAN_DATE}\..+\..+") || echo ‖OR_True-$LINENO
+        echo DEL_LIST_AD = $DEL_LIST_AD
+
+        for DEL_NAME in $DEL_LIST_AD; do
+          echo DEL $DEL_NAME;
+          gh release delete-asset -y -R ${{github.repository}} v0.0 $DEL_NAME || echo ‖OR_True-$LINENO;
+        done
+
+        echo -------
+        gh release view -R ${{github.repository}} $UNTAG_DAILY --json assets --jq .assets[].name || echo ‖OR_True-$LINENO
+
+        echo -------
+        gh release view -R ${{github.repository}} $UNTAG_DELTA --json assets --jq .assets[].name || echo ‖OR_True-$LINENO
+
+        echo ------- v0.0 -------
+        gh release view -R ${{github.repository}} v0.0 --json assets --jq .assets[].name || echo ‖OR_True-$LINENO
+
+
+    - name: End Stat
+      if: always()
+      run: |
+        ls -alFh .
+        du -sch *
+        df -h -xtmpfs
+
+        echo == End ==
+
+############################################################################################################################################################
