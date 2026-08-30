@@ -12,7 +12,7 @@ on:
       test2:
         default:
   schedule:
-  - cron: "47 23,11 * * *"
+  - cron: "48 23,11 * * *"
 
 env:
   TEST1: ${{ inputs.test1 }}
@@ -752,7 +752,7 @@ jobs:
         gh release upload --clobber -R ${{github.repository}} $UNTAG_SIGN FC-Rev-List.txt
         echo "Update: FC-Rev-List.txt"
 
-        echo -------
+        echo - - - - - - -
 
         gh release download -R ${{github.repository}} $UNTAG_DAILY -p FreeCaD-x64-Dev-Daily.AppImage.txt || echo ‖OR_True-$LINENO
 
@@ -803,7 +803,7 @@ jobs:
 
         #### if [[ ${{github.event_name}} == 'schedule' && $FC_PREV_DATE != $FC_BUILD_DATE ]]; then
 
-        echo -------
+        echo - - - - - - -
 
         gh release download -R ${{github.repository}} $UNTAG_DAILY -p FreeCaD-x64-Dev-Latest.AppImage.txt || echo ‖OR_True-$LINENO
 
@@ -850,6 +850,8 @@ jobs:
             echo          FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage > FreeCaD-x64-Dev-Latest.AppImage.txt
             gh release upload --clobber -R ${{github.repository}} $UNTAG_DAILY FreeCaD-x64-Dev-Latest.AppImage.txt
         fi
+
+        echo - - - - - - -
 
         echo "\$${{'{{github.event_name}}'}} = ${{github.event_name}}" \
             " / \$FC_DPREV_DATE = $FC_DPREV_DATE / \$FC_PREV_DATE = $FC_PREV_DATE / \$FC_BUILD_DATE = $FC_BUILD_DATE"
@@ -944,13 +946,13 @@ jobs:
           gh release delete-asset -y -R ${{github.repository}} v0.0 $DEL_NAME || echo ‖OR_True-$LINENO;
         done
 
-        echo -------
+        echo - - - - - - -
         gh release view -R ${{github.repository}} $UNTAG_DAILY --json assets --jq .assets[].name || echo ‖OR_True-$LINENO
 
-        echo -------
+        echo - - - - - - -
         gh release view -R ${{github.repository}} $UNTAG_DELTA --json assets --jq .assets[].name || echo ‖OR_True-$LINENO
 
-        echo ------- v0.0 -------
+        echo - - - - - - - v0.0 - - - - - - -
         gh release view -R ${{github.repository}} v0.0 --json assets --jq .assets[].name || echo ‖OR_True-$LINENO
 
 
