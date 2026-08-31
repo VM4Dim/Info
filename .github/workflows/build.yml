@@ -669,6 +669,7 @@ jobs:
           -i fc/lib/python3/dist-packages/matplotlib/__init__.py
 
         mv -t fc/bin inst-env/EXTR/usr/bin/{jq,rdiff,xxh*,paraview}
+        patchelf --set-rpath '$ORIGIN/../lib' fc/bin/{jq,rdiff,xxh*,paraview}
 
         echo - - - - - - -
         ls -alFh fc/bin
