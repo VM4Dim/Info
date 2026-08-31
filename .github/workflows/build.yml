@@ -670,11 +670,15 @@ jobs:
 
         mv -t fc/bin inst-env/EXTR/usr/bin/{jq,rdiff,xxh*,paraview}
 
+        echo - - - - - - -
         ls -alFh fc/bin
 
+        echo - - - - - - -
         du -sch  inst-env/EXTR/*
         du -sch  inst-env/EXTR/usr/*
         du -sch  inst-env/EXTR/usr/share/*
+
+        echo - - - - - - -
         ls -alFh inst-env/EXTR/usr/bin
 
         mv -t fc inst-env/EXTR
