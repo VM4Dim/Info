@@ -668,10 +668,15 @@ jobs:
         sed -e "s|'/etc/matplotlibrc'|os.path.join(get_data_path(), 'matplotlibrc')|" \
           -i fc/lib/python3/dist-packages/matplotlib/__init__.py
 
+        mv -t fc/bin inst-env/EXTR/usr/bin/{jq,rdiff,xxh*,paraview}
+
+        ls -alFh fc/bin
+
         du -sch  inst-env/EXTR/*
         du -sch  inst-env/EXTR/usr/*
         du -sch  inst-env/EXTR/usr/share/*
         ls -alFh inst-env/EXTR/usr/bin
+
         mv -t fc inst-env/EXTR
 
         echo "include-system-site-packages = false" > fc/pyvenv.cfg
