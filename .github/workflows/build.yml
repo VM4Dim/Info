@@ -634,12 +634,12 @@ jobs:
         apt-get download  python3.14-minimal libpython3.14{,-minimal,-stdlib} libpyside6-py3-6.10 libshiboken6-py3-6.10
         apt-get download  python3-pyside6.qt{core,gui,network,svg,svgwidgets,uitools,widgets,xml}
         apt-get download  python3-pivy python3-numpy python3-ply python3-packaging python3-yaml libyaml-0-2 python3-lark python3-defusedxml
-        apt-get download  python-matplotlib{,-data} python3-pil python3-pyparsing python3-cycler python3-dateutil python3-kiwisolver
+        apt-get download  python3-matplotlib python-matplotlib-data python3-pil python3-pyparsing python3-cycler python3-dateutil python3-kiwisolver
         apt-get download  libicu78 libpcre2-posix3 libpcre2-8-0 libpcre2-16-0 libpcre2-32-0 libfmt10 libxerces-c3.2t64 libexpat1 libffi8 libxml2-16
         apt-get download  libboost-program-options1.90.0 libboost-thread1.90.0 libkeyutils1 python3-typing-extensions
         apt-get download  {,python3-}vtk9 libvtk9.6{,-qt} {,python3-}paraview libhdf5{,-openmpi}{,-hl}-310 libopenmpi40 libproj25 proj-data
         apt-get download  libdeflate0 libbz2-1.0 liblzma5 zlib1g libzstd1 liblz4-1 libdouble-conversion3 libtbb{12,bind-2-5,malloc2}
-        apt-get download  libyaml-cpp0.9 jq libjq1 rdiff librsync2t64 libb2-1 xxhash libxxhash0 libedit2 liblerc4 libjsoncpp26
+        apt-get download  libyaml-cpp0.9 jq libjq1 libonig5 rdiff librsync2t64 libb2-1 xxhash libxxhash0 libedit2 liblerc4 libjsoncpp26
         apt-get download  libx11-6 libx11-xcb1 libxcb1 libxau6 libxdmcp6 libdrm2 libdrm-amdgpu1 libdrm-intel1 libxext6 libxxf86vm1 libxshmfence1 \
           libxcb-dri3-0 libxcb-glx0 \
           libgl1 libegl1 libopengl0 libglvnd0 libglx0 libegl-mesa0 libglx-mesa0 libgl1-mesa-dri mesa-libgallium libgbm1 libvulkan1 \
