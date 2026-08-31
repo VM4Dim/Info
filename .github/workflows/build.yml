@@ -627,7 +627,7 @@ jobs:
         cd inst-env
 
         apt-get download  libqt6{core6t64,gui6,network6,widgets6,dbus6,svg6,svgwidgets6,opengl6,openglwidgets6,printsupport6,uitools6,xml6}
-        apt-get download  qt6-qpa-plugins qt6-wayland qt6-svg-plugins libcoin80t64 libsoqt620
+        apt-get download  qt6-qpa-plugins qt6-wayland libqt6waylandclient6 qt6-svg-plugins libcoin80t64 libsoqt620
         apt-get download  libfreeimage3 libfreeimageplus3 libjpeg8 libpng16-16t64 libopenexr-3-4-33 libtiff6 libraw23t64 libwebp7 libopenjp2-7
         apt-get download  libfreetype6 libfontconfig1 libgraphite2-3 libbrotli1 libharfbuzz0b
         apt-get download  python3.14-minimal libpython3.14{,-minimal,-stdlib} libpyside6-py3-6.10 libshiboken6-py3-6.10
@@ -926,6 +926,12 @@ jobs:
 
         echo ===== CLEAN DELTA =============================================
 
+        DEL_LIST_AD_=$(gh release view -R ${{github.repository}} $UNTAG_DELTA --json assets --jq .assets[].name \
+          | grep -E "FreeCaD-x64-Dev.R.+\.[0-9]+\..+_R.+\.${CLEAN_DATE}\..+\.AppDelta" | sort | tail -n+2) || echo ‖OR_True-$LINENO
+        echo DEL_LIST_AD_ = $DEL_LIST_AD_
+
+        echo - - - - - - -
+
         DEL_LIST_AD=$(gh release view -R ${{github.repository}} $UNTAG_DELTA --json assets --jq .assets[].name \
           | grep -E "FreeCaD-x64-Dev.R.+\.${CLEAN_DATE}\..+_R.+\.${CLEAN_DATE}\..+\.AppDelta") || echo ‖OR_True-$LINENO
         echo DEL_LIST_AD = $DEL_LIST_AD
@@ -937,8 +943,14 @@ jobs:
 
         echo ===== CLEAN DELTA v0.0 =============================================
 
+        DEL_LIST_AD_=$(gh release view -R ${{github.repository}} v0.0 --json assets --jq .assets[].name \
+          | grep -E "FC-x64-Dev.R.+\.[0-9]+\..+_R.+\.${CLEAN_DATE}\..+\.AIDelta" | sort | tail -n+2) || echo ‖OR_True-$LINENO
+        echo DEL_LIST_AD_ = $DEL_LIST_AD_
+
+        echo - - - - - - -
+
         DEL_LIST_AD=$(gh release view -R ${{github.repository}} v0.0 --json assets --jq .assets[].name \
-          | grep -E "FreeCaD-x64-Dev.R.+\.${CLEAN_DATE}\..+_R.+\.${CLEAN_DATE}\..+\..+") || echo ‖OR_True-$LINENO
+          | grep -E "FC-x64-Dev.R.+\.${CLEAN_DATE}\..+_R.+\.${CLEAN_DATE}\..+\..+") || echo ‖OR_True-$LINENO
         echo DEL_LIST_AD = $DEL_LIST_AD
 
         for DEL_NAME in $DEL_LIST_AD; do
