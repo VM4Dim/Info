@@ -641,7 +641,7 @@ jobs:
         apt-get download  libdeflate0 libbz2-1.0 liblzma5 zlib1g libzstd1 liblz4-1 libdouble-conversion3 libtbb{12,bind-2-5,malloc2}
         apt-get download  libyaml-cpp0.9 jq libjq1 libonig5 rdiff librsync2t64 libb2-1 xxhash libxxhash0 libedit2 liblerc4 libjsoncpp26
         apt-get download  libx11-6 libx11-xcb1 libxcb1 libxau6 libxdmcp6 libdrm2 libdrm-amdgpu1 libdrm-intel1 libxext6 libxxf86vm1 libxshmfence1 \
-          libxcb-dri3-0 libxcb-glx0 \
+          libxcb-dri3-0 libxcb-glx0 libva-x11-2 \
           libgl1 libegl1 libopengl0 libglvnd0 libglx0 libegl-mesa0 libglx-mesa0 libgl1-mesa-dri mesa-libgallium libgbm1 libvulkan1 \
           libllvm21 libxcb-present0 libxcb-shm0 libxcb-xfixes0 libxcb-sync1 libxcb-cursor0 libxcb-image0 libxcb-randr0 libxcb-render0 libxcb-render-util0 \
           libxcb-util1 libxcb-keysyms1 libxcb-icccm4 libxcb-shape0 libxcb-xinerama0 libxcb-xinput0 libxcb-xkb1 libxkbcommon0 libxkbcommon-x11-0 \
@@ -694,7 +694,7 @@ jobs:
     - name: Pack result
       run: |
         time mksquashfs fc fc-${{github.run_number}}-${{matrix.build}}.sqsh \
-          -keep-as-directory -root-owned -no-exports -mkfs-time 0 -all-time 0 -comp zstd -Xcompression-level 15 -b 256K
+          -keep-as-directory -root-owned -no-exports -no-xattrs -mkfs-time 0 -all-time 0 -comp zstd -Xcompression-level 15 -b 256K
         du -sh fc occt *.sqsh
         df -h -xtmpfs
 
