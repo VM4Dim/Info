@@ -717,7 +717,7 @@ jobs:
     - name: Pack result
       run: |
         time mksquashfs fc fc-${{github.run_number}}-${{matrix.build}}_Z.sqsh \
-          -keep-as-directory -root-owned -no-exports -no-xattrs -mkfs-time 0 -all-time 0 -comp zstd -Xcompression-level 15 -b 128K
+          -keep-as-directory -root-owned -no-exports -no-xattrs -mkfs-time 0 -all-time 0 -comp zstd -Xcompression-level 15 -b 256K
 
         time mksquashfs fc fc-${{github.run_number}}-${{matrix.build}}.sqsh \
           -keep-as-directory -root-owned -no-exports -no-xattrs -mkfs-time 0 -all-time 0 -comp zstd -Xcompression-level 15 -b 256K
@@ -807,7 +807,7 @@ jobs:
 
             if [[ $FC_DPREV_DATE != $FC_BUILD_DATE ]]; then
                 gh release download -R ${{github.repository}} $UNTAG_SIGN -p $FC_DPREV.sign || echo ‖OR_True-$LINENO
-                gh release download -R ${{github.repository}} $UNTAG_SIGN -p ${FC_DPREV/.AppImage/_Z.AISign/} || echo ‖OR_True-$LINENO
+                gh release download -R ${{github.repository}} $UNTAG_SIGN -p ${FC_DPREV/.AppImage/_Z.AISign} || echo ‖OR_True-$LINENO
 
                 if [ -f $FC_DPREV.sign ]; then
                     rdiff delta ${FC_DPREV}.sign FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage \
@@ -871,6 +871,7 @@ jobs:
             echo FC_PREV = $FC_PREV / _REV = $FC_PREV_REV / _DATE = $FC_PREV_DATE / _DATE_TIME = $FC_PREV_DATE_TIME
 
             gh release download -R ${{github.repository}} $UNTAG_SIGN -p $FC_PREV.sign || echo ‖OR_True-$LINENO
+            gh release download -R ${{github.repository}} $UNTAG_SIGN -p ${FC_PREV/.AppImage/_Z.AISign} || echo ‖OR_True-$LINENO
 
             if [ -f $FC_PREV.sign ]; then
 
