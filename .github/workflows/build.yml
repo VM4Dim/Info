@@ -430,6 +430,7 @@ jobs:
           python3-pyside6.qtnetwork     \
           python3-defusedxml            \
           python3-pybind11              \
+          python3-lark                  \
           libyaml-cpp-dev               \
           libxerces-c-dev               \
           libboost-filesystem-dev       \
@@ -437,7 +438,6 @@ jobs:
           libboost-program-options-dev  \
           libboost-thread-dev           \
           libmedc-dev                   \
-          python3-lark                  \
           libfreeimage-dev              \
           libfreetype-dev               \
           libharfbuzz-dev               \
@@ -445,7 +445,8 @@ jobs:
           squashfs-tools                \
           rdiff  xxhash                 \
           swig                          \
-          libvtk9-dev
+          libvtk9-dev                   \
+          debootstrap
 
 #    - name: Apt Install /Sid
 #      run: |
@@ -627,7 +628,7 @@ jobs:
         cd inst-env
 
         apt-get download  libqt6{core6t64,gui6,network6,widgets6,dbus6,svg6,svgwidgets6,opengl6,openglwidgets6,printsupport6,uitools6,xml6\
-        ,help6,core5compat6,sql6}
+        ,help6,core5compat6,sql6} libc6
         apt-get download  qt6-qpa-plugins qt6-wayland libqt6waylandclient6 qt6-svg-plugins libcoin80t64 libsoqt620
         apt-get download  libfreeimage3 libfreeimageplus3 libjpeg8 libpng16-16t64 libopenexr-3-4-33 libtiff6 libraw23t64 libwebp7 libopenjp2-7
         apt-get download  libfreetype6 libfontconfig1 libgraphite2-3 libbrotli1 libharfbuzz0b
@@ -695,6 +696,10 @@ jobs:
       run: |
         time mksquashfs fc fc-${{github.run_number}}-${{matrix.build}}.sqsh \
           -keep-as-directory -root-owned -no-exports -no-xattrs -mkfs-time 0 -all-time 0 -comp zstd -Xcompression-level 15 -b 256K
+
+        time mksquashfs fc fc-${{github.run_number}}-${{matrix.build}}_Z.sqsh \
+          -keep-as-directory -root-owned -no-exports -no-xattrs -mkfs-time 0 -all-time 0 -comp zstd -Xcompression-level 15 -b 1M
+
         du -sh fc occt *.sqsh
         df -h -xtmpfs
 
@@ -737,8 +742,6 @@ jobs:
 
         echo FC_BUILD_DATE_TIME = ${FC_BUILD_DATE_TIME} / date = $(date '+%Y-%m-%d_%H%M%S') / date -u = $(date -u '+%Y-%m-%d_%H%M%S')
 
-        ln -s fc-${{github.run_number}}-${{matrix.build}}.sqsh FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage
-
         gh release download -R ${{github.repository}} $UNTAG_CONFIG -p untag_rel.txt   || echo ‖OR_True-$LINENO
         UNTAG_REL=$(cat untag_rel.txt)
 
@@ -751,12 +754,17 @@ jobs:
         gh release download -R ${{github.repository}} $UNTAG_CONFIG -p untag_delta.txt || echo ‖OR_True-$LINENO
         UNTAG_DELTA=$(cat untag_delta.txt)
 
+        ln -s fc-${{github.run_number}}-${{matrix.build}}.sqsh FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage
+
         gh release upload --clobber -R ${{github.repository}} $UNTAG_DAILY \
           "FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage#"\
         ``"FreeCåD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE2}.AppImage" || echo ‖OR_True-$LINENO
 
         rdiff -b1024 signature FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage.sign
         gh release upload -R ${{github.repository}} $UNTAG_SIGN FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage.sign
+
+        rdiff -b1024 signature fc-${{github.run_number}}-${{matrix.build}}_Z.sqsh FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}_Z.AISign
+        gh release upload -R ${{github.repository}} $UNTAG_SIGN FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}_Z.AISign
 
         gh release download -R ${{github.repository}} $UNTAG_SIGN -p FC-Rev-List.txt || echo ‖OR_True-$LINENO
         echo Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME} >> FC-Rev-List.txt
@@ -777,16 +785,26 @@ jobs:
 
             if [[ $FC_DPREV_DATE != $FC_BUILD_DATE ]]; then
                 gh release download -R ${{github.repository}} $UNTAG_SIGN -p $FC_DPREV.sign || echo ‖OR_True-$LINENO
+                gh release download -R ${{github.repository}} $UNTAG_SIGN -p ${FC_DPREV/.AppImage/_Z.AISign/} || echo ‖OR_True-$LINENO
 
                 if [ -f $FC_DPREV.sign ]; then
-                    rdiff delta $FC_DPREV.sign FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage \
+                    rdiff delta ${FC_DPREV}.sign FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage \
                       FreeCaD-x64-Dev.R${FC_DPREV_REV}.20${FC_DPREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppDelta
+
+                    rdiff delta ${FC_DPREV/.AppImage/_Z.AISign/} FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage \
+                      FreeCaD-x64-Dev.R${FC_DPREV_REV}.20${FC_DPREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}_Z.AIDelta || echo ‖OR_True-$LINENO
 
                     echo >> \
                       FreeCaD-x64-Dev.R${FC_DPREV_REV}.20${FC_DPREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppDelta
 
+                    echo >> \
+                      FreeCaD-x64-Dev.R${FC_DPREV_REV}.20${FC_DPREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}_Z.AIDelta
+
                     xxh128sum FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage | head -c 32 >> \
                       FreeCaD-x64-Dev.R${FC_DPREV_REV}.20${FC_DPREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppDelta
+
+                    xxh128sum FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage | head -c 32 >> \
+                      FreeCaD-x64-Dev.R${FC_DPREV_REV}.20${FC_DPREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}_Z.AIDelta
 
                     gh release upload --clobber -R ${{github.repository}} $UNTAG_DELTA \
                       "FreeCaD-x64-Dev.R${FC_DPREV_REV}.20${FC_DPREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppDelta#"\
@@ -798,6 +816,10 @@ jobs:
                     gh release upload --clobber -R ${{github.repository}} v0.0 \
                               "FC-x64-Dev.R${FC_DPREV_REV}.20${FC_DPREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AIDelta#"\
         `                    `"FC-x64-Dev.R${FC_DPREV_REV}.${FC_DPREV_DATE:2}_R${FC_BUILD_REV}.${FC_BUILD_DATE:2}.AIDelta" || echo ‖OR_True-$LINENO
+
+                    gh release upload --clobber -R ${{github.repository}} v0.0 \
+                              "FC-x64-Dev.R${FC_DPREV_REV}.20${FC_DPREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}_Z.AIDelta#"\
+        `                    `"FC-x64-Dev.R${FC_DPREV_REV}.${FC_DPREV_DATE:2}_R${FC_BUILD_REV}.${FC_BUILD_DATE:2}_Z.AIDelta" || echo ‖OR_True-$LINENO
 
                     echo "Upload: FC-x64-Dev.R${FC_DPREV_REV}.20${FC_DPREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AIDelta"
                 fi
@@ -830,14 +852,23 @@ jobs:
 
             if [ -f $FC_PREV.sign ]; then
 
-                rdiff delta $FC_PREV.sign FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage \
+                rdiff delta ${FC_PREV}.sign FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage \
                   FreeCaD-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppDelta
+
+                rdiff delta ${FC_PREV/.AppImage/_Z.AISign/} FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage \
+                  FreeCaD-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}_Z.AIDelta || echo ‖OR_True-$LINENO
 
                 echo >> \
                   FreeCaD-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppDelta
 
+                echo >> \
+                  FreeCaD-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}_Z.AIDelta
+
                 xxh128sum FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage | head -c 32 >> \
                   FreeCaD-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppDelta
+
+                xxh128sum FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage | head -c 32 >> \
+                  FreeCaD-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}_Z.AIDelta
 
                 gh release upload --clobber -R ${{github.repository}} $UNTAG_DELTA \
                   "FreeCaD-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppDelta#"\
@@ -849,6 +880,10 @@ jobs:
                 gh release upload --clobber -R ${{github.repository}} v0.0 \
                           "FC-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AIDelta#"\
         `                `"FC-x64-Dev.R${FC_PREV_REV}.${FC_PREV_DATE:2}_R${FC_BUILD_REV}.${FC_BUILD_DATE:2}.AIDelta" || echo ‖OR_True-$LINENO
+
+                gh release upload --clobber -R ${{github.repository}} v0.0 \
+                          "FC-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AIDelta#"\
+        `                `"FC-x64-Dev.R${FC_PREV_REV}.${FC_PREV_DATE:2}_R${FC_BUILD_REV}.${FC_BUILD_DATE:2}_Z.AIDelta" || echo ‖OR_True-$LINENO
 
                 echo "Upload: FC-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AIDelta"
 
@@ -907,13 +942,19 @@ jobs:
         gh release view -R ${{github.repository}} $UNTAG_SIGN --json assets --jq .assets[].name || echo ‖OR_True-$LINENO
 
         DEL_LIST_S=$(gh release view -R ${{github.repository}} $UNTAG_SIGN --json assets --jq .assets[].name \
-          | grep -E "FreeCaD-x64-Dev.R.+\.${CLEAN_DATE}\..+\.AppImage.sign") || echo ‖OR_True-$LINENO
+          | grep -E "FreeCaD-x64-Dev.R.+\.${CLEAN_DATE}\..+\.A.+") || echo ‖OR_True-$LINENO
+
+        #DEL_LIST_S=$(gh release view -R ${{github.repository}} $UNTAG_SIGN --json assets --jq .assets[].name \
+        #  | grep -E "FreeCaD-x64-Dev.R.+\.${CLEAN_DATE}\..+\.AppImage.sign") || echo ‖OR_True-$LINENO
+
         echo DEL_LIST_S = $DEL_LIST_S
 
         for DEL_NAME in $DEL_LIST_S; do
           echo DEL $DEL_NAME;
           gh release delete-asset -y -R ${{github.repository}} $UNTAG_SIGN $DEL_NAME || echo ‖OR_True-$LINENO;
         done
+
+        echo - - - - - - -
 
         gh release view -R ${{github.repository}} $UNTAG_SIGN --json assets --jq .assets[].name || echo ‖OR_True-$LINENO
 
@@ -933,6 +974,8 @@ jobs:
           gh release delete-asset -y -R ${{github.repository}} $UNTAG_DAILY $DEL_NAME || echo ‖OR_True-$LINENO;
         done
 
+        echo - - - - - - -
+
         gh release view -R ${{github.repository}} $UNTAG_DAILY --json assets --jq .assets[].name || echo ‖OR_True-$LINENO
 
         echo ===== CLEAN DELTA =============================================
@@ -942,10 +985,6 @@ jobs:
         echo DEL_LIST_AD = $DEL_LIST_AD
 
         # echo - - - - - - -
-
-        # DEL_LIST_AD=$(gh release view -R ${{github.repository}} $UNTAG_DELTA --json assets --jq .assets[].name \
-        #   | grep -E "FreeCaD-x64-Dev.R.+\.${CLEAN_DATE}\..+_R.+\.${CLEAN_DATE}\..+\.AppDelta") || echo ‖OR_True-$LINENO
-        # echo DEL_LIST_AD = $DEL_LIST_AD
 
         for DEL_NAME in $DEL_LIST_AD; do
           echo DEL $DEL_NAME;
@@ -959,10 +998,6 @@ jobs:
         echo DEL_LIST_AD = $DEL_LIST_AD
 
         # echo - - - - - - -
-
-        # DEL_LIST_AD=$(gh release view -R ${{github.repository}} v0.0 --json assets --jq .assets[].name \
-        #   | grep -E "FC-x64-Dev.R.+\.${CLEAN_DATE}\..+_R.+\.${CLEAN_DATE}\..+\..+") || echo ‖OR_True-$LINENO
-        # echo DEL_LIST_AD = $DEL_LIST_AD
 
         for DEL_NAME in $DEL_LIST_AD; do
           echo DEL $DEL_NAME;
