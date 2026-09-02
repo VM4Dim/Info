@@ -700,7 +700,7 @@ jobs:
 
         sudo ln -s stonking /usr/share/debootstrap/scripts/stonking-proposed
 
-        time debootstrap --print-debs --keep-debootstrap-dir --no-check-sig --log-extra-deps --arch=amd64 --variant=minbase --components=main,universe \
+        time debootstrap --print-debs --keep-debootstrap-dir --log-extra-deps --arch=amd64 --variant=minbase --components=main,universe \
         --extra-suites=stonking \
         --exclude=apt,base-files,base-passwd,bash,bsdutils,ca-certificates,coreutils,coreutils-from-uutils,dash,debconf,debianutils,diffutils,dpkg,e2fsprogs\
         ,findutils,gcc-16-base,gnu-coreutils,grep,gzip,hostname,init-system-helpers,libacl1,libattr1,libaudit-common,libaudit1,libblkid1,libbsd0,libbz2-1.0,libc-bin\
@@ -708,7 +708,7 @@ jobs:
         ,libncursesw6,libpam-modules,libpam-modules-bin,libpam-runtime,libpam0g,libpcre2-8-0,libproc2-0,libselinux1,libsemanage-common,libsemanage2,libsepol2\
         ,libsmartcols1,libss2,libssl3t64,libsystemd0,libtinfo6,libudev1,libuuid1,libzstd1,login,login.defs,logsave,mawk,mount,ncurses-base,ncurses-bin\
         ,openssl-provider-legacy,passwd,perl-base,procps,rust-coreutils,sed,sensible-utils,sysvinit-utils,tar,util-linux,zlib1g,usrmerge,debconf,tzdata \
-        --include=paraview,tcl  stonking-proposed  SP
+        --include=paraview,tcl  stonking-proposed  SP || echo ‖OR_True-$LINENO
 
         du -sch SP/*
         df -h -xtmpfs
