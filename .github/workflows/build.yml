@@ -698,7 +698,9 @@ jobs:
         mkdir DD
         cd DD
 
-        time debootstrap --download-only --keep-debootstrap-dir --no-check-sig --log-extra-deps --arch=amd64 --variant=minbase --components=main,universe \
+        sudo ln -s stonking /usr/share/debootstrap/scripts/stonking-proposed
+
+        time debootstrap --print-debs --keep-debootstrap-dir --no-check-sig --log-extra-deps --arch=amd64 --variant=minbase --components=main,universe \
         --extra-suites=stonking \
         --exclude=apt,base-files,base-passwd,bash,bsdutils,ca-certificates,coreutils,coreutils-from-uutils,dash,debconf,debianutils,diffutils,dpkg,e2fsprogs\
         ,findutils,gcc-16-base,gnu-coreutils,grep,gzip,hostname,init-system-helpers,libacl1,libattr1,libaudit-common,libaudit1,libblkid1,libbsd0,libbz2-1.0,libc-bin\
@@ -714,7 +716,7 @@ jobs:
     - name: Pack result
       run: |
         time mksquashfs fc fc-${{github.run_number}}-${{matrix.build}}_Z.sqsh \
-          -keep-as-directory -root-owned -no-exports -no-xattrs -mkfs-time 0 -all-time 0 -comp zstd -Xcompression-level 15 -b 1M
+          -keep-as-directory -root-owned -no-exports -no-xattrs -mkfs-time 0 -all-time 0 -comp zstd -Xcompression-level 15 -b 1024K
 
         time mksquashfs fc fc-${{github.run_number}}-${{matrix.build}}.sqsh \
           -keep-as-directory -root-owned -no-exports -no-xattrs -mkfs-time 0 -all-time 0 -comp zstd -Xcompression-level 15 -b 256K
