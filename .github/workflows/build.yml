@@ -686,6 +686,9 @@ jobs:
 
         mv -t fc inst-env/EXTR
 
+        ln -s ld-linux-x86-64.so.2 fc/lib/ld-linXX-x86-64.so.2
+        sed -e 's/ld-linux-x86-64/ld-linXX-x86-64/' -i fc/lib/libc.so.6
+
         echo "include-system-site-packages = false" > fc/pyvenv.cfg
         echo "[Paths]"                      > fc/bin/qt6.conf
         echo "Prefix    = .."              >> fc/bin/qt6.conf
@@ -700,7 +703,7 @@ jobs:
 
         sudo ln -s stonking /usr/share/debootstrap/scripts/stonking-proposed
 
-        time debootstrap --print-debs --keep-debootstrap-dir --no-check-sig --log-extra-deps --arch=amd64 --variant=minbase --components=main,universe \
+        time debootstrap --download-only --keep-debootstrap-dir --no-check-sig --log-extra-deps --arch=amd64 --variant=minbase --components=main,universe \
         --extra-suites=stonking \
         --exclude=apt,base-files,base-passwd,bash,bsdutils,ca-certificates,coreutils,coreutils-from-uutils,dash,debconf,debianutils,diffutils,dpkg,e2fsprogs\
         ,findutils,gcc-16-base,gnu-coreutils,grep,gzip,hostname,init-system-helpers,libacl1,libattr1,libaudit-common,libaudit1,libblkid1,libbsd0,libbz2-1.0,libc-bin\
@@ -708,16 +711,17 @@ jobs:
         ,libncursesw6,libpam-modules,libpam-modules-bin,libpam-runtime,libpam0g,libpcre2-8-0,libproc2-0,libselinux1,libsemanage-common,libsemanage2,libsepol2\
         ,libsmartcols1,libss2,libssl3t64,libsystemd0,libtinfo6,libudev1,libuuid1,libzstd1,login,login.defs,logsave,mawk,mount,ncurses-base,ncurses-bin\
         ,openssl-provider-legacy,passwd,perl-base,procps,rust-coreutils,sed,sensible-utils,sysvinit-utils,tar,util-linux,zlib1g,usrmerge,debconf,tzdata \
-        --include=paraview,tcl  stonking-proposed  SP http://archive.ubuntu.com/ubuntu || echo ‖OR_True-$LINENO
+          stonking-proposed  SP  http://archive.ubuntu.com/ubuntu || echo ‖OR_True-$LINENO
 
         du -sch SP/*
         du -sch SP/var/*
+        du -sch SP/var/cache/apt/*
         df -h -xtmpfs
 
     - name: Pack result
       run: |
         time mksquashfs fc fc-${{github.run_number}}-${{matrix.build}}_Z.sqsh \
-          -keep-as-directory -root-owned -no-exports -no-xattrs -mkfs-time 0 -all-time 0 -comp zstd -Xcompression-level 15 -b 256K
+          -keep-as-directory -root-owned -no-exports -no-xattrs -mkfs-time 0 -all-time 0 -comp zstd -Xcompression-level 15 -b 64K
 
         time mksquashfs fc fc-${{github.run_number}}-${{matrix.build}}.sqsh \
           -keep-as-directory -root-owned -no-exports -no-xattrs -mkfs-time 0 -all-time 0 -comp zstd -Xcompression-level 15 -b 256K
