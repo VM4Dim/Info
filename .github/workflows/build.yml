@@ -711,7 +711,7 @@ jobs:
         ,libncursesw6,libpam-modules,libpam-modules-bin,libpam-runtime,libpam0g,libpcre2-8-0,libproc2-0,libselinux1,libsemanage-common,libsemanage2,libsepol2\
         ,libsmartcols1,libss2,libssl3t64,libsystemd0,libtinfo6,libudev1,libuuid1,libzstd1,login,login.defs,logsave,mawk,mount,ncurses-base,ncurses-bin\
         ,openssl-provider-legacy,passwd,perl-base,procps,rust-coreutils,sed,sensible-utils,sysvinit-utils,tar,util-linux,zlib1g,usrmerge,debconf,tzdata \
-          stonking-proposed  SP  http://archive.ubuntu.com/ubuntu || echo ‖OR_True-$LINENO
+          --include=paraview,tcl  stonking-proposed  SP  http://archive.ubuntu.com/ubuntu || echo ‖OR_True-$LINENO
 
         du -sch SP/*
         du -sch SP/var/*
