@@ -628,7 +628,7 @@ jobs:
         cd inst-env
 
         apt-get download  libqt6{core6t64,gui6,network6,widgets6,dbus6,svg6,svgwidgets6,opengl6,openglwidgets6,printsupport6,uitools6,xml6\
-        ,help6,core5compat6,sql6} libc6 libc-gconv-modules-extra libgcc-s1
+        ,help6,core5compat6,sql6} libc6 libc-gconv-modules-extra libgcc-s1 libstdc++6 gcc-16-base libgomp1
         apt-get download  qt6-qpa-plugins qt6-wayland libqt6waylandclient6 qt6-svg-plugins libcoin80t64 libsoqt620
         apt-get download  libfreeimage3 libfreeimageplus3 libjpeg8 libpng16-16t64 libopenexr-3-4-33 libtiff6 libraw23t64 libwebp7 libopenjp2-7
         apt-get download  libfreetype6 libfontconfig1 libgraphite2-3 libbrotli1 libharfbuzz0b
@@ -721,7 +721,7 @@ jobs:
     - name: Pack result
       run: |
         time mksquashfs fc fc-${{github.run_number}}-${{matrix.build}}_Z.sqsh \
-          -keep-as-directory -root-owned -no-exports -no-xattrs -mkfs-time 0 -all-time 0 -comp zstd -Xcompression-level 15 -b 64K
+          -keep-as-directory -root-owned -no-exports -no-xattrs -mkfs-time 0 -all-time 0 -comp zstd -Xcompression-level 16 -b 256K
 
         time mksquashfs fc fc-${{github.run_number}}-${{matrix.build}}.sqsh \
           -keep-as-directory -root-owned -no-exports -no-xattrs -mkfs-time 0 -all-time 0 -comp zstd -Xcompression-level 15 -b 256K
@@ -781,6 +781,7 @@ jobs:
         UNTAG_DELTA=$(cat untag_delta.txt)
 
         ln -s fc-${{github.run_number}}-${{matrix.build}}.sqsh FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage
+        ln -s fc-${{github.run_number}}-${{matrix.build}}_Z.sqsh FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}_Z.AppImage
 
         gh release upload --clobber -R ${{github.repository}} $UNTAG_DAILY \
           "FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage#"\
@@ -817,7 +818,7 @@ jobs:
                     rdiff delta ${FC_DPREV}.sign FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage \
                       FreeCaD-x64-Dev.R${FC_DPREV_REV}.20${FC_DPREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppDelta
 
-                    rdiff delta ${FC_DPREV/.AppImage/_Z.AISign} FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage \
+                    rdiff delta ${FC_DPREV/.AppImage/_Z.AISign} FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}_Z.AppImage \
                       FC-x64-Dev.R${FC_DPREV_REV}.20${FC_DPREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}_Z.AIDelta || echo ‖OR_True-$LINENO
 
                     echo >> \
@@ -829,7 +830,7 @@ jobs:
                     xxh128sum FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage | head -c 32 >> \
                       FreeCaD-x64-Dev.R${FC_DPREV_REV}.20${FC_DPREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppDelta
 
-                    xxh128sum FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage | head -c 32 >> \
+                    xxh128sum FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}_Z.AppImage | head -c 32 >> \
                       FC-x64-Dev.R${FC_DPREV_REV}.20${FC_DPREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}_Z.AIDelta
 
                     gh release upload --clobber -R ${{github.repository}} $UNTAG_DELTA \
@@ -882,7 +883,7 @@ jobs:
                 rdiff delta ${FC_PREV}.sign FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage \
                   FreeCaD-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppDelta
 
-                rdiff delta ${FC_PREV/.AppImage/_Z.AISign} FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage \
+                rdiff delta ${FC_PREV/.AppImage/_Z.AISign} FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}_Z.AppImage \
                   FC-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}_Z.AIDelta || echo ‖OR_True-$LINENO
 
                 echo >> \
@@ -894,7 +895,7 @@ jobs:
                 xxh128sum FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage | head -c 32 >> \
                   FreeCaD-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppDelta
 
-                xxh128sum FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage | head -c 32 >> \
+                xxh128sum FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}_Z.AppImage | head -c 32 >> \
                   FC-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}_Z.AIDelta
 
                 gh release upload --clobber -R ${{github.repository}} $UNTAG_DELTA \
