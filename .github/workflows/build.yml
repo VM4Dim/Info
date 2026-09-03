@@ -713,7 +713,9 @@ jobs:
         ,openssl-provider-legacy,passwd,perl-base,procps,rust-coreutils,sed,sensible-utils,sysvinit-utils,tar,util-linux,zlib1g,usrmerge,debconf,tzdata \
           --include=paraview,tcl  stonking-proposed  SP  https://archive.ubuntu.com/ubuntu || echo ‖OR_True-$LINENO
 
-        time debootstrap --download-only --keep-debootstrap-dir --no-check-sig --arch=amd64 --variant=minbase --components=main,universe \
+        echo - - - - - - -
+
+        echo time debootstrap --download-only --keep-debootstrap-dir --no-check-sig --arch=amd64 --variant=minbase --components=main,universe \
         --extra-suites=stonking \
         --exclude=apt,base-files,base-passwd,bash,bsdutils,ca-certificates,coreutils,coreutils-from-uutils,dash,debconf,debianutils,diffutils,dpkg,e2fsprogs\
         ,findutils,gcc-16-base,gnu-coreutils,grep,gzip,hostname,init-system-helpers,libacl1,libattr1,libaudit-common,libaudit1,libblkid1,libbsd0,libbz2-1.0,libc-bin\
