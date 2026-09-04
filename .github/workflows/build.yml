@@ -164,7 +164,7 @@ jobs:
         Pin-Priority: 400
 
 
-        Package: libfreetype-dev
+        Package: libfreetype-dev libfreetype6
         Pin: release n=resolute
         Pin-Priority: 850
 
@@ -186,7 +186,7 @@ jobs:
 
         echo - - - - - - -
 
-        apt-cache policy libfreetype-dev libbz2-dev libbz2-1.0
+        apt-cache policy libfreetype6-dev libfreetype-dev libfreetype6 libbz2-dev libbz2-1.0
 
     - name: Apt Install
       if: ${{steps.check-rev.outputs.OCCT_NEED_BUILD == 'YES'}}
