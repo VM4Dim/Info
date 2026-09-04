@@ -142,36 +142,51 @@ jobs:
       if: ${{steps.check-rev.outputs.OCCT_NEED_BUILD == 'YES'}}
       run: |
         echo "deb http://archive.ubuntu.com/ubuntu ${{env.LAST_UBUNTU_DIST}} main restricted universe multiverse" | sudo tee /etc/apt/sources.list.d/plus.list
-        echo "deb http://ftp.debian.org/debian sid main contrib non-free"                                      | sudo tee -a /etc/apt/sources.list.d/plus.list
+        # echo "deb http://ftp.debian.org/debian sid main contrib non-free"                                      | sudo tee -a /etc/apt/sources.list.d/plus.list
         # echo "deb http://ftp.debian.org/debian experimental main contrib non-free"                             | sudo tee -a /etc/apt/sources.list.d/plus.list
 
         cat <<EOF | sudo tee /etc/apt/preferences.d/plus-pin
 
         Package: *
         Pin: release n=${{env.LAST_UBUNTU_DIST}}
-        Pin-Priority: 850
-
-        Package: *
-        Pin: release n=resolute
         Pin-Priority: 800
 
         Package: *
+        Pin: release n=resolute
+        Pin-Priority: 700
+
+        Package: *
         Pin: release n=sid
-        Pin-Priority: 750
+        Pin-Priority: 600
 
         Package: *
         Pin: release a=experimental
         Pin-Priority: 400
 
+
+        Package: libfreetype-dev
+        Pin: release n=resolute
+        Pin-Priority: 850
+
+
         EOF
+
+        echo - - - - - - -
 
         wget -O- 'https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x78DBA3BC47EF2265' \
           | sudo tee /etc/apt/trusted.gpg.d/78DBA3BC47EF2265-Debian-13-trixie.asc > /dev/null
+
+        echo - - - - - - -
+
 
     - name: Apt Update
       if: ${{steps.check-rev.outputs.OCCT_NEED_BUILD == 'YES'}}
       run: |
         sudo apt-get update
+
+        echo - - - - - - -
+
+        apt-cache policy libfreetype-dev libbz2-dev libbz2-1.0
 
     - name: Apt Install
       if: ${{steps.check-rev.outputs.OCCT_NEED_BUILD == 'YES'}}
@@ -735,6 +750,8 @@ jobs:
       run: |
         time mksquashfs fc fc-${{github.run_number}}-${{matrix.build}}_Z.sqsh \
           -keep-as-directory -root-owned -no-exports -no-xattrs -mkfs-time 0 -all-time 0 -comp zstd -Xcompression-level 18 -b 1024K
+
+        echo - - - - - - -
 
         time mksquashfs fc fc-${{github.run_number}}-${{matrix.build}}.sqsh \
           -keep-as-directory -root-owned -no-exports -no-xattrs -mkfs-time 0 -all-time 0 -comp zstd -Xcompression-level 15 -b 256K
