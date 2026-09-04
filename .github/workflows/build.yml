@@ -715,7 +715,7 @@ jobs:
 
         echo - - - - - - -
 
-        echo time debootstrap --download-only --keep-debootstrap-dir --no-check-sig --arch=amd64 --variant=minbase --components=main,universe \
+        time debootstrap --download-only --keep-debootstrap-dir --arch=amd64 --variant=minbase --components=main,universe \
         --extra-suites=stonking \
         --exclude=apt,base-files,base-passwd,bash,bsdutils,ca-certificates,coreutils,coreutils-from-uutils,dash,debconf,debianutils,diffutils,dpkg,e2fsprogs\
         ,findutils,gcc-16-base,gnu-coreutils,grep,gzip,hostname,init-system-helpers,libacl1,libattr1,libaudit-common,libaudit1,libblkid1,libbsd0,libbz2-1.0,libc-bin\
@@ -728,6 +728,7 @@ jobs:
         du -sch SP/*
         du -sch SP/var/*
         du -sch SP/var/cache/apt/*
+        ls SP/var/cache/apt/archives | wc
         df -h -xtmpfs
 
     - name: Pack result
@@ -976,10 +977,12 @@ jobs:
 
         echo ==== CLEAN SIGN ==============================================
 
+        gh release view -R ${{github.repository}} $UNTAG_SIGN --json assets --jq .assets[].name || echo ‖OR_True-$LINENO
+
+        echo - - - - - - -
+
         CLEAN_DATE=$(date -u --date="-5 day" "+%Y%m%d")
         echo CLEAN_DATE = ${CLEAN_DATE} ${CLEAN_DATE:6}
-
-        gh release view -R ${{github.repository}} $UNTAG_SIGN --json assets --jq .assets[].name || echo ‖OR_True-$LINENO
 
         DEL_LIST_S=$(gh release view -R ${{github.repository}} $UNTAG_SIGN --json assets --jq .assets[].name \
           | grep -E "FreeCaD-x64-Dev.R.+\.${CLEAN_DATE}\..+\.A.+") || echo ‖OR_True-$LINENO
@@ -987,18 +990,18 @@ jobs:
         #DEL_LIST_S=$(gh release view -R ${{github.repository}} $UNTAG_SIGN --json assets --jq .assets[].name \
         #  | grep -E "FreeCaD-x64-Dev.R.+\.${CLEAN_DATE}\..+\.AppImage.sign") || echo ‖OR_True-$LINENO
 
-        echo DEL_LIST_S = $DEL_LIST_S
+        echo DEL_LIST_S = [ $DEL_LIST_S ]
 
         for DEL_NAME in $DEL_LIST_S; do
           echo DEL $DEL_NAME;
           gh release delete-asset -y -R ${{github.repository}} $UNTAG_SIGN $DEL_NAME || echo ‖OR_True-$LINENO;
         done
 
-        echo - - - - - - -
-
-        gh release view -R ${{github.repository}} $UNTAG_SIGN --json assets --jq .assets[].name || echo ‖OR_True-$LINENO
-
         echo ===== CLEAN AI =============================================
+
+        gh release view -R ${{github.repository}} $UNTAG_DAILY --json assets --jq .assets[].name || echo ‖OR_True-$LINENO
+
+        echo - - - - - - -
 
         if [[ ${CLEAN_DATE:7} == 5 ]]; then
           DEL_LIST_AI=$(gh release view -R ${{github.repository}} $UNTAG_DAILY --json assets --jq .assets[].name \
@@ -1007,7 +1010,8 @@ jobs:
           DEL_LIST_AI=$(gh release view -R ${{github.repository}} $UNTAG_DAILY --json assets --jq .assets[].name \
             | grep -E "FreeCaD-x64-Dev.R.+\.${CLEAN_DATE}\..+\.AppImage") || echo ‖OR_True-$LINENO
         fi
-        echo DEL_LIST_AI = $DEL_LIST_AI
+
+        echo DEL_LIST_AI = [ $DEL_LIST_AI ]
 
         for DEL_NAME in $DEL_LIST_AI; do
           echo DEL $DEL_NAME;
@@ -1020,37 +1024,42 @@ jobs:
 
         echo ===== CLEAN DELTA =============================================
 
+        gh release view -R ${{github.repository}} $UNTAG_DELTA --json assets --jq .assets[].name || echo ‖OR_True-$LINENO
+
+        echo - - - - - - -
+
         DEL_LIST_AD=$(gh release view -R ${{github.repository}} $UNTAG_DELTA --json assets --jq .assets[].name \
           | grep -E "FreeCaD-x64-Dev.R.+\.[0-9]+\..+_R.+\.${CLEAN_DATE}\..+\.AppDelta" | sort | tail -n+2) || echo ‖OR_True-$LINENO
-        echo DEL_LIST_AD = $DEL_LIST_AD
 
-        # echo - - - - - - -
+        echo DEL_LIST_AD = [ $DEL_LIST_AD ]
 
         for DEL_NAME in $DEL_LIST_AD; do
           echo DEL $DEL_NAME;
           gh release delete-asset -y -R ${{github.repository}} $UNTAG_DELTA $DEL_NAME || echo ‖OR_True-$LINENO;
         done
 
+        echo - - - - - - -
+
+        gh release view -R ${{github.repository}} $UNTAG_DELTA --json assets --jq .assets[].name || echo ‖OR_True-$LINENO
+
         echo ===== CLEAN DELTA v0.0 =============================================
+
+        gh release view -R ${{github.repository}} v0.0 --json assets --jq .assets[].name || echo ‖OR_True-$LINENO
+
+        echo - - - - - - -
 
         DEL_LIST_AD=$(gh release view -R ${{github.repository}} v0.0 --json assets --jq .assets[].name \
           | grep -E "FC-x64-Dev.R.+\.[0-9]+\..+_R.+\.${CLEAN_DATE}\..+\.AIDelta" | sort | tail -n+2) || echo ‖OR_True-$LINENO
-        echo DEL_LIST_AD = $DEL_LIST_AD
 
-        # echo - - - - - - -
+        echo DEL_LIST_AD = [ $DEL_LIST_AD ]
 
         for DEL_NAME in $DEL_LIST_AD; do
           echo DEL $DEL_NAME;
           gh release delete-asset -y -R ${{github.repository}} v0.0 $DEL_NAME || echo ‖OR_True-$LINENO;
         done
 
-        echo - - - - - - -
-        gh release view -R ${{github.repository}} $UNTAG_DAILY --json assets --jq .assets[].name || echo ‖OR_True-$LINENO
-
-        echo - - - - - - -
-        gh release view -R ${{github.repository}} $UNTAG_DELTA --json assets --jq .assets[].name || echo ‖OR_True-$LINENO
-
         echo - - - - - - - v0.0 - - - - - - -
+
         gh release view -R ${{github.repository}} v0.0 --json assets --jq .assets[].name || echo ‖OR_True-$LINENO
 
 
