@@ -164,7 +164,7 @@ jobs:
         Pin-Priority: 400
 
 
-        Package: libfreetype-dev libfreetype6
+        Package: libfreetype-dev libfreetype6 libbz2-dev libbz2-1.0
         Pin: release n=resolute
         Pin-Priority: 850
 
@@ -177,6 +177,8 @@ jobs:
           | sudo tee /etc/apt/trusted.gpg.d/78DBA3BC47EF2265-Debian-13-trixie.asc > /dev/null
 
         echo - - - - - - -
+
+        du -sh /etc/apt/*
 
 
     - name: Apt Update
