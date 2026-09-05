@@ -403,19 +403,24 @@ jobs:
 
         Package: *
         Pin: release n=stonking
-        Pin-Priority: 850
-
-        Package: *
-        Pin: release n=resolute
         Pin-Priority: 800
 
         Package: *
+        Pin: release n=resolute
+        Pin-Priority: 700
+
+        Package: *
         Pin: release n=sid
-        Pin-Priority: 750
+        Pin-Priority: 600
 
         Package: *
         Pin: release a=experimental
         Pin-Priority: 400
+
+
+        Package: libfreetype-dev libfreetype6 libbz2-dev libbz2-1.0  libfontconfig-dev libfontconfig1-dev uuid-dev libuuid1
+        Pin: release n=resolute
+        Pin-Priority: 850
 
         EOF
 
