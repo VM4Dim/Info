@@ -1050,10 +1050,6 @@ jobs:
           gh release delete-asset -y -R ${{github.repository}} $UNTAG_DAILY $DEL_NAME || echo ‖OR_True-$LINENO;
         done
 
-        echo - - - - - - -
-
-        gh release view -R ${{github.repository}} $UNTAG_DAILY --json assets --jq .assets[].name || echo ‖OR_True-$LINENO
-
         echo ===== CLEAN DELTA =============================================
 
         gh release view -R ${{github.repository}} $UNTAG_DELTA --json assets --jq .assets[].name || echo ‖OR_True-$LINENO
@@ -1070,10 +1066,6 @@ jobs:
           gh release delete-asset -y -R ${{github.repository}} $UNTAG_DELTA $DEL_NAME || echo ‖OR_True-$LINENO;
         done
 
-        echo - - - - - - -
-
-        gh release view -R ${{github.repository}} $UNTAG_DELTA --json assets --jq .assets[].name || echo ‖OR_True-$LINENO
-
         echo ===== CLEAN DELTA v0.0 =============================================
 
         gh release view -R ${{github.repository}} v0.0 --json assets --jq .assets[].name || echo ‖OR_True-$LINENO
@@ -1089,10 +1081,6 @@ jobs:
           echo DEL $DEL_NAME;
           gh release delete-asset -y -R ${{github.repository}} v0.0 $DEL_NAME || echo ‖OR_True-$LINENO;
         done
-
-        echo - - - - - - - v0.0 - - - - - - -
-
-        gh release view -R ${{github.repository}} v0.0 --json assets --jq .assets[].name || echo ‖OR_True-$LINENO
 
 
     - name: End Stat
