@@ -394,8 +394,12 @@ jobs:
       run: |
         # echo 'APT::Default-Release "stonking";' | sudo tee /etc/apt/apt.conf.d/Default-Release
 
-        echo "deb http://archive.ubuntu.com/ubuntu stonking           main restricted universe multiverse"  | sudo tee    /etc/apt/sources.list.d/plus.list
-        echo "deb http://archive.ubuntu.com/ubuntu stonking-proposed  main restricted universe multiverse"  | sudo tee -a /etc/apt/sources.list.d/plus.list
+        # echo "deb http://archive.ubuntu.com/ubuntu stonking           main restricted universe multiverse"  | sudo tee    /etc/apt/sources.list.d/plus.list
+        # echo "deb http://archive.ubuntu.com/ubuntu stonking-proposed  main restricted universe multiverse"  | sudo tee -a /etc/apt/sources.list.d/plus.list
+
+        echo "deb http://azure.archive.ubuntu.com/ubuntu stonking           main restricted universe multiverse"  | sudo tee    /etc/apt/sources.list.d/plus.list
+        echo "deb http://azure.archive.ubuntu.com/ubuntu stonking-proposed  main restricted universe multiverse"  | sudo tee -a /etc/apt/sources.list.d/plus.list
+
         # echo "deb http://ftp.debian.org/debian sid           main contrib non-free"                         | sudo tee -a /etc/apt/sources.list.d/plus.list
         # echo "deb http://ftp.debian.org/debian experimental  main contrib non-free"                         | sudo tee -a /etc/apt/sources.list.d/plus.list
 
