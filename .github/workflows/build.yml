@@ -755,6 +755,8 @@ jobs:
         ,openssl-provider-legacy,passwd,perl-base,procps,rust-coreutils,sed,sensible-utils,sysvinit-utils,tar,util-linux,zlib1g,usrmerge,debconf,tzdata \
           --include=paraview,tcl  stonking-proposed  SP  http://azure.archive.ubuntu.com/ubuntu  || echo ‖OR_True-$LINENO
 
+        echo - - - - - - -
+
         du -sch SP/*
         du -sch SP/var/*
         du -sch SP/var/cache/apt/*
@@ -764,7 +766,7 @@ jobs:
     - name: Pack result
       run: |
         time mksquashfs fc fc-${{github.run_number}}-${{matrix.build}}_Z.sqsh \
-          -keep-as-directory -root-owned -no-exports -no-xattrs -mkfs-time 0 -all-time 0 -comp zstd -Xcompression-level 18 -b 1024K
+          -keep-as-directory -root-owned -no-exports -no-xattrs -mkfs-time 0 -all-time 0 -comp zstd -Xcompression-level 16 -b 256K
 
         echo - - - - - - -
 
