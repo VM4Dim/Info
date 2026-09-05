@@ -418,7 +418,7 @@ jobs:
         Pin-Priority: 400
 
 
-        Package: libfreetype* libbz2*  libfontconfig* uuid-dev libuuid1  util-linux libmount*
+        Package: libfreetype* libbz2*  libfontconfig* uuid-dev libuuid1  util-linux libmount* libblkid*
         Pin: release n=resolute
         Pin-Priority: 850
 
