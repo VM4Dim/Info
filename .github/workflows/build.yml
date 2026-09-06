@@ -519,24 +519,30 @@ jobs:
 
         M_PLUS_REV=$(git rev-list --count origin/main..master-plus)
         echo M_PLUS_REV = $M_PLUS_REV
-        echo "M_PLUS_REV=$M_PLUS_REV" >> $GITHUB_OUTPUT
+        echo "M_PLUS_REV=$M_PLUS_REV"     >> $GITHUB_OUTPUT
         echo "\$M_PLUS_REV = $M_PLUS_REV" >> $GITHUB_STEP_SUMMARY
 
         ##  Git Reset
-        # git reset --hard 2745f436 # 40176
         # git reset --hard 516595fb # 40182
         # git reset --hard de9bd5e1 # change MIN_boost_version
 
         #  git config --add remote.origin.fetch '+refs/pull/31143/*:refs/remotes/origin/pull/31143/*'
-        #  echo ----------------------------------------------------------
-        #  cat .git/config
-        #  echo ----------------------------------------------------------
-        #  git fetch -v --all --recurse-submodules=on-demand --force
-        #  git submodule update --init --remote --force
-        #  # git reset --hard origin/pull/31143/head
-        #  git switch --recurse-submodules origin/pull/31143/merge
-        #  git log --all --graph --date-order --decorate --oneline -16
-        #  echo ----------------------------------------------------------
+           git config --add remote.origin.fetch '+refs/pull/32073/*:refs/remotes/origin/pull/32073/*'
+           echo ----------------------------------------------------------
+           cat .git/config
+           echo ----------------------------------------------------------
+
+           git fetch origin pull/32073/merge:pull/32073/merge
+           git merge --no-edit pull/32073/merge
+
+           git log --all --graph --date-order --decorate --oneline -16
+           echo ----------------------------------------------------------
+
+        M_PLUS_REV=$(git rev-list --count origin/main..master-plus)
+        echo M_PLUS_REV = $M_PLUS_REV
+        echo "M_PLUS_REV=$M_PLUS_REV"     >> $GITHUB_OUTPUT
+        echo "\$M_PLUS_REV = $M_PLUS_REV" >> $GITHUB_STEP_SUMMARY
+
 
     - name: Fix Ref-Revision ${{env.FREECAD_REV}}
       env:
