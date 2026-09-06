@@ -503,8 +503,9 @@ jobs:
         git log --all --graph --date-order --decorate --oneline -16
         echo ----------------------------------------------------------
         FREECAD_REV=$[$(git rev-list --count 01d9e0c0..origin/main) + 38641 + 78] # +78 since=2024-09-01
-        echo "FREECAD_REV=$FREECAD_REV" >> $GITHUB_OUTPUT
         echo FREECAD_REV = $FREECAD_REV
+        echo "FREECAD_REV=$FREECAD_REV" >> $GITHUB_OUTPUT
+        echo "\$FREECAD_REV = $FREECAD_REV" >> $GITHUB_STEP_SUMMARY
 
         git remote add VM4Dim https://github.com/VM4Dim/FreeCAD
         git fetch -v --all
@@ -517,8 +518,9 @@ jobs:
         echo ----------------------------------------------------------
 
         M_PLUS_REV=$(git rev-list --count origin/main..master-plus)
-        echo "M_PLUS_REV=$M_PLUS_REV" >> $GITHUB_OUTPUT
         echo M_PLUS_REV = $M_PLUS_REV
+        echo "M_PLUS_REV=$M_PLUS_REV" >> $GITHUB_OUTPUT
+        echo "\$M_PLUS_REV = $M_PLUS_REV" >> $GITHUB_STEP_SUMMARY
 
         ##  Git Reset
         # git reset --hard 2745f436 # 40176
