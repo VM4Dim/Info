@@ -505,7 +505,7 @@ jobs:
         FREECAD_REV=$[$(git rev-list --count 01d9e0c0..origin/main) + 38641 + 78] # +78 since=2024-09-01
         echo FREECAD_REV = $FREECAD_REV
         echo "FREECAD_REV=$FREECAD_REV" >> $GITHUB_OUTPUT
-        echo "\$FREECAD_REV = $FREECAD_REV" >> $GITHUB_STEP_SUMMARY
+        echo "\$FC_MAIN_REV = $FREECAD_REV" >> $GITHUB_STEP_SUMMARY
 
         git remote add VM4Dim https://github.com/VM4Dim/FreeCAD
         git fetch -v --all
