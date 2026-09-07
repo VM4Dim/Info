@@ -884,6 +884,7 @@ jobs:
                 gh release download -R ${{github.repository}} $UNTAG_SIGN -p $FC_DPREV.sign || echo ‖OR_True-$LINENO
                 gh release download -R ${{github.repository}} $UNTAG_SIGN -p ${FC_DPREV/.AppImage/.AISign} || echo ‖OR_True-$LINENO
                 gh release download -R ${{github.repository}} $UNTAG_SIGN -p ${FC_DPREV/.AppImage/_Z.AISign} || echo ‖OR_True-$LINENO
+
                 ln -s $FC_DPREV.sign ${FC_DPREV/.AppImage/.AISign} || echo ‖OR_True-$LINENO
 
                 # if [ -e $FC_DPREV.sign ]; then
@@ -951,7 +952,8 @@ jobs:
             gh release download -R ${{github.repository}} $UNTAG_SIGN -p $FC_PREV.sign || echo ‖OR_True-$LINENO
             gh release download -R ${{github.repository}} $UNTAG_SIGN -p ${FC_PREV/.AppImage/.AISign} || echo ‖OR_True-$LINENO
             gh release download -R ${{github.repository}} $UNTAG_SIGN -p ${FC_PREV/.AppImage/_Z.AISign} || echo ‖OR_True-$LINENO
-            ln -s $FC_DPREV.sign ${FC_PREV/.AppImage/.AISign} || echo ‖OR_True-$LINENO
+
+            ln -s $FC_PREV.sign ${FC_PREV/.AppImage/.AISign} || echo ‖OR_True-$LINENO
 
             # if [ -e $FC_PREV.sign ]; then
             if [ -e ${FC_PREV/.AppImage/.AISign} ]; then
