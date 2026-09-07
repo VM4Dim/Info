@@ -536,11 +536,11 @@ jobs:
         cat .git/config
         echo ----------------------------------------------------------
 
-        git merge --no-edit origin/pull/32073/merge
+        git fetch -v --all
         git log --all --graph --date-order --decorate --oneline -16
         echo ----------------------------------------------------------
 
-        git fetch -v --all
+        git merge --no-edit origin/pull/32073/merge
         git log --all --graph --date-order --decorate --oneline -16
         echo ----------------------------------------------------------
 
