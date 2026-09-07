@@ -1004,11 +1004,13 @@ jobs:
                   FC-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}_Z.AIDelta
 
               echo == L: $LINENO ==
+              ls -alFh
 
                 ln -s  FC-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AIDelta
-                  FreeCaD-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppDelta
+                  FreeCaD-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppDelta || echo ‖OR_True-$LINENO
 
               echo == L: $LINENO ==
+              ls -alFh
 
                 gh release upload --clobber -R ${{github.repository}} $UNTAG_DELTA \
                   "FreeCaD-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppDelta#"\
