@@ -505,12 +505,8 @@ jobs:
         git log --all --graph --date-order --decorate --oneline -16
         echo ----------------------------------------------------------
 
-        FREECAD_REV=$[$(git rev-list --count 01d9e0c0..origin/main) + 38641 + 78] # +78 since=2024-09-01
-        echo FREECAD_REV = $FREECAD_REV
-        echo "FREECAD_REV=$FREECAD_REV" >> $GITHUB_OUTPUT
-        echo "\$FC_MAIN_REV = $FREECAD_REV" >> $GITHUB_STEP_SUMMARY
-
         git remote add VM4Dim https://github.com/VM4Dim/FreeCAD
+
         git fetch -v --all
         git switch -t VM4Dim/master-plus
         git log --all --graph --date-order --decorate --oneline -16
@@ -519,11 +515,6 @@ jobs:
         git rebase -v origin/main
         git log --all --graph --date-order --decorate --oneline -16
         echo ----------------------------------------------------------
-
-        M_PLUS_REV=$(git rev-list --count origin/main..master-plus)
-        echo M_PLUS_REV = $M_PLUS_REV
-        echo "M_PLUS_REV=$M_PLUS_REV" >> $GITHUB_OUTPUT
-        echo "<sub>\$M_PLUS_REV = ${M_PLUS_REV}</sub>" >> $GITHUB_STEP_SUMMARY
 
         ##  Git Reset
         # git reset --hard 516595fb # 40182
@@ -539,6 +530,20 @@ jobs:
         git fetch -v --all
         git log --all --graph --date-order --decorate --oneline -16
         echo ----------------------------------------------------------
+
+        git rebase -v origin/main
+        git log --all --graph --date-order --decorate --oneline -16
+        echo ----------------------------------------------------------
+
+        FREECAD_REV=$[$(git rev-list --count 01d9e0c0..origin/main) + 38641 + 78] # +78 since=2024-09-01
+        echo FREECAD_REV = $FREECAD_REV
+        echo "FREECAD_REV=$FREECAD_REV" >> $GITHUB_OUTPUT
+        echo "\$FC_MAIN_REV = $FREECAD_REV" >> $GITHUB_STEP_SUMMARY
+
+        M_PLUS_REV=$(git rev-list --count origin/main..master-plus)
+        echo M_PLUS_REV = $M_PLUS_REV
+        echo "M_PLUS_REV=$M_PLUS_REV" >> $GITHUB_OUTPUT
+        echo "<sub>\$M_PLUS_REV = ${M_PLUS_REV}</sub>" >> $GITHUB_STEP_SUMMARY
 
         git merge --no-edit origin/pull/32073/merge
         git log --all --graph --date-order --decorate --oneline -16
@@ -974,17 +979,23 @@ jobs:
             # if [ -e $FC_PREV.sign ]; then
             if [ -e ${FC_PREV/.AppImage/.AISign} ]; then
 
+              echo == L: $LINENO ==
+
                 rdiff delta ${FC_PREV/.AppImage/.AISign} FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage \
-                  FC-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AIDelta
+                  FC-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AIDelta || echo ‖OR_True-$LINENO
 
                 rdiff delta ${FC_PREV/.AppImage/_Z.AISign} FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}_Z.AppImage \
                   FC-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}_Z.AIDelta || echo ‖OR_True-$LINENO
+
+              echo == L: $LINENO ==
 
                 echo >> \
                   FC-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AIDelta
 
                 echo >> \
                   FC-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}_Z.AIDelta
+
+              echo == L: $LINENO ==
 
                 xxh128sum FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage | head -c 32 >> \
                   FC-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AIDelta
@@ -992,16 +1003,24 @@ jobs:
                 xxh128sum FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}_Z.AppImage | head -c 32 >> \
                   FC-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}_Z.AIDelta
 
+              echo == L: $LINENO ==
+
                 ln -s  FC-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AIDelta
                   FreeCaD-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppDelta
+
+              echo == L: $LINENO ==
 
                 gh release upload --clobber -R ${{github.repository}} $UNTAG_DELTA \
                   "FreeCaD-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppDelta#"\
         `        `"FreeCåD-x64-Dev R${FC_PREV_REV}.${FC_PREV_DATE:2} ‣ R${FC_BUILD_REV}.${FC_BUILD_DATE:2}.AppDelta" || echo ‖OR_True-$LINENO
 
+              echo == L: $LINENO ==
+
                 gh release upload --clobber -R ${{github.repository}} v0.0 \
                        "FC-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AIDelta#"\
         `             `"FC-x64-Dev.R${FC_PREV_REV}.${FC_PREV_DATE:2}_R${FC_BUILD_REV}.${FC_BUILD_DATE:2}.AIDelta" || echo ‖OR_True-$LINENO
+
+              echo == L: $LINENO ==
 
                 gh release upload --clobber -R ${{github.repository}} v0.0 \
                           "FC-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}_Z.AIDelta#"\
