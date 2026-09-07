@@ -122,6 +122,8 @@ jobs:
         echo "OCCT_NEED_BUILD=$OCCT_NEED_BUILD" >> $GITHUB_OUTPUT
         echo "OCCT_MASTER_REV=$OCCT_MASTER_REV" >> $GITHUB_OUTPUT
 
+        echo "<sub>\$OCCT_MASTER_REV = ${OCCT_MASTER_REV}</sub>" >> $GITHUB_STEP_SUMMARY
+
         echo ""                                                                                      >> $SOURCE_DIR/adm/cmake/version.cmake
         echo "if (OCC_VERSION_DEVELOPMENT)"                                                          >> $SOURCE_DIR/adm/cmake/version.cmake
         echo "    set (OCC_VERSION_DEVELOPMENT \"\${OCC_VERSION_DEVELOPMENT}.r$OCCT_MASTER_REV\" )"  >> $SOURCE_DIR/adm/cmake/version.cmake
@@ -502,6 +504,7 @@ jobs:
 
         git log --all --graph --date-order --decorate --oneline -16
         echo ----------------------------------------------------------
+
         FREECAD_REV=$[$(git rev-list --count 01d9e0c0..origin/main) + 38641 + 78] # +78 since=2024-09-01
         echo FREECAD_REV = $FREECAD_REV
         echo "FREECAD_REV=$FREECAD_REV" >> $GITHUB_OUTPUT
@@ -510,38 +513,45 @@ jobs:
         git remote add VM4Dim https://github.com/VM4Dim/FreeCAD
         git fetch -v --all
         git switch -t VM4Dim/master-plus
-        echo ----------------------------------------------------------
         git log --all --graph --date-order --decorate --oneline -16
         echo ----------------------------------------------------------
+
         git rebase -v origin/main
         git log --all --graph --date-order --decorate --oneline -16
         echo ----------------------------------------------------------
 
         M_PLUS_REV=$(git rev-list --count origin/main..master-plus)
         echo M_PLUS_REV = $M_PLUS_REV
-        echo "M_PLUS_REV=$M_PLUS_REV"     >> $GITHUB_OUTPUT
-        echo "##### \$M_PLUS_REV = $M_PLUS_REV" >> $GITHUB_STEP_SUMMARY
+        echo "M_PLUS_REV=$M_PLUS_REV" >> $GITHUB_OUTPUT
+        echo "<sub>\$M_PLUS_REV = ${M_PLUS_REV}</sub>" >> $GITHUB_STEP_SUMMARY
 
         ##  Git Reset
         # git reset --hard 516595fb # 40182
         # git reset --hard de9bd5e1 # change MIN_boost_version
 
         #  git config --add remote.origin.fetch '+refs/pull/31143/*:refs/remotes/origin/pull/31143/*'
-           git config --add remote.origin.fetch '+refs/pull/32073/*:refs/remotes/origin/pull/32073/*'
-           echo ----------------------------------------------------------
-           cat .git/config
-           echo ----------------------------------------------------------
+        git config --add remote.origin.fetch '+refs/pull/32073/*:refs/remotes/origin/pull/32073/*'
+        echo ----------------------------------------------------------
 
-           git fetch origin pull/32073/merge:pull/32073/merge
-           git merge --no-edit pull/32073/merge
+        cat .git/config
+        echo ----------------------------------------------------------
 
-           git log --all --graph --date-order --decorate --oneline -16
-           echo ----------------------------------------------------------
+        git merge --no-edit origin/pull/32073/merge
+        git log --all --graph --date-order --decorate --oneline -16
+        echo ----------------------------------------------------------
+
+        git fetch -v --all
+        git log --all --graph --date-order --decorate --oneline -16
+        echo ----------------------------------------------------------
+
+        git rebase -v origin/main
+        git log --all --graph --date-order --decorate --oneline -16
+        echo ----------------------------------------------------------
 
         M_PLUS_REV=$(git rev-list --count origin/main..master-plus)
         echo M_PLUS_REV = $M_PLUS_REV
-        echo "M_PLUS_REV=$M_PLUS_REV"     >> $GITHUB_OUTPUT
-        echo "###### \$M_PLUS_REV = $M_PLUS_REV" >> $GITHUB_STEP_SUMMARY
+        echo "M_PLUS_REV=$M_PLUS_REV" >> $GITHUB_OUTPUT
+        echo "<sub>\$M_PLUS_REV = ${M_PLUS_REV}</sub>" >> $GITHUB_STEP_SUMMARY
 
 
     - name: Fix Ref-Revision ${{env.FREECAD_REV}}
@@ -844,7 +854,8 @@ jobs:
           "FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage#"\
         ``"FreeCåD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE2}.AppImage" || echo ‖OR_True-$LINENO
 
-        rdiff -b1024 signature FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AISign
+        rdiff -b1024 signature FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage \
+                               FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AISign
         ln -s FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AISign FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage.sign
         gh release upload -R ${{github.repository}} $UNTAG_SIGN FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AISign
         gh release upload -R ${{github.repository}} $UNTAG_SIGN FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage.sign
@@ -873,8 +884,9 @@ jobs:
                 gh release download -R ${{github.repository}} $UNTAG_SIGN -p $FC_DPREV.sign || echo ‖OR_True-$LINENO
                 gh release download -R ${{github.repository}} $UNTAG_SIGN -p ${FC_DPREV/.AppImage/.AISign} || echo ‖OR_True-$LINENO
                 gh release download -R ${{github.repository}} $UNTAG_SIGN -p ${FC_DPREV/.AppImage/_Z.AISign} || echo ‖OR_True-$LINENO
+                ln -s $FC_DPREV.sign ${FC_DPREV/.AppImage/.AISign} || echo ‖OR_True-$LINENO
 
-                if [ -f $FC_DPREV.sign ]; then
+                if [ -e $FC_DPREV.sign ]; then
                     rdiff delta ${FC_DPREV}.sign FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage \
                       FreeCaD-x64-Dev.R${FC_DPREV_REV}.20${FC_DPREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppDelta
 
@@ -938,8 +950,9 @@ jobs:
             gh release download -R ${{github.repository}} $UNTAG_SIGN -p $FC_PREV.sign || echo ‖OR_True-$LINENO
             gh release download -R ${{github.repository}} $UNTAG_SIGN -p ${FC_PREV/.AppImage/.AISign} || echo ‖OR_True-$LINENO
             gh release download -R ${{github.repository}} $UNTAG_SIGN -p ${FC_PREV/.AppImage/_Z.AISign} || echo ‖OR_True-$LINENO
+            ln -s $FC_DPREV.sign ${FC_PREV/.AppImage/.AISign} || echo ‖OR_True-$LINENO
 
-            if [ -f $FC_PREV.sign ]; then
+            if [ -e $FC_PREV.sign ]; then
 
                 rdiff delta ${FC_PREV}.sign FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage \
                   FreeCaD-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppDelta
