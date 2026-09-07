@@ -520,7 +520,7 @@ jobs:
         M_PLUS_REV=$(git rev-list --count origin/main..master-plus)
         echo M_PLUS_REV = $M_PLUS_REV
         echo "M_PLUS_REV=$M_PLUS_REV"     >> $GITHUB_OUTPUT
-        echo "\$M_PLUS_REV = $M_PLUS_REV" >> $GITHUB_STEP_SUMMARY
+        echo "##### \$M_PLUS_REV = $M_PLUS_REV" >> $GITHUB_STEP_SUMMARY
 
         ##  Git Reset
         # git reset --hard 516595fb # 40182
@@ -541,7 +541,7 @@ jobs:
         M_PLUS_REV=$(git rev-list --count origin/main..master-plus)
         echo M_PLUS_REV = $M_PLUS_REV
         echo "M_PLUS_REV=$M_PLUS_REV"     >> $GITHUB_OUTPUT
-        echo "\$M_PLUS_REV = $M_PLUS_REV" >> $GITHUB_STEP_SUMMARY
+        echo "###### \$M_PLUS_REV = $M_PLUS_REV" >> $GITHUB_STEP_SUMMARY
 
 
     - name: Fix Ref-Revision ${{env.FREECAD_REV}}
@@ -844,16 +844,18 @@ jobs:
           "FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage#"\
         ``"FreeCåD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE2}.AppImage" || echo ‖OR_True-$LINENO
 
-        rdiff -b1024 signature FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage.sign
+        rdiff -b1024 signature FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AISign
+        ln -s FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AISign FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage.sign
+        gh release upload -R ${{github.repository}} $UNTAG_SIGN FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AISign
         gh release upload -R ${{github.repository}} $UNTAG_SIGN FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage.sign
 
         rdiff -b1024 signature fc-${{github.run_number}}-${{matrix.build}}_Z.sqsh FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}_Z.AISign
         gh release upload -R ${{github.repository}} $UNTAG_SIGN FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}_Z.AISign
 
-        gh release download -R ${{github.repository}} $UNTAG_SIGN -p FC-Rev-List.txt || echo ‖OR_True-$LINENO
-        echo Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME} >> FC-Rev-List.txt
-        gh release upload --clobber -R ${{github.repository}} $UNTAG_SIGN FC-Rev-List.txt
-        echo "Update: FC-Rev-List.txt"
+        # gh release download -R ${{github.repository}} $UNTAG_SIGN -p FC-Rev-List.txt || echo ‖OR_True-$LINENO
+        # echo Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME} >> FC-Rev-List.txt
+        # gh release upload --clobber -R ${{github.repository}} $UNTAG_SIGN FC-Rev-List.txt
+        # echo "Update: FC-Rev-List.txt"
 
         echo - - - - - - -
 
@@ -869,6 +871,7 @@ jobs:
 
             if [[ $FC_DPREV_DATE != $FC_BUILD_DATE ]]; then
                 gh release download -R ${{github.repository}} $UNTAG_SIGN -p $FC_DPREV.sign || echo ‖OR_True-$LINENO
+                gh release download -R ${{github.repository}} $UNTAG_SIGN -p ${FC_DPREV/.AppImage/.AISign} || echo ‖OR_True-$LINENO
                 gh release download -R ${{github.repository}} $UNTAG_SIGN -p ${FC_DPREV/.AppImage/_Z.AISign} || echo ‖OR_True-$LINENO
 
                 if [ -f $FC_DPREV.sign ]; then
@@ -933,6 +936,7 @@ jobs:
             echo FC_PREV = $FC_PREV / _REV = $FC_PREV_REV / _DATE = $FC_PREV_DATE / _DATE_TIME = $FC_PREV_DATE_TIME
 
             gh release download -R ${{github.repository}} $UNTAG_SIGN -p $FC_PREV.sign || echo ‖OR_True-$LINENO
+            gh release download -R ${{github.repository}} $UNTAG_SIGN -p ${FC_PREV/.AppImage/.AISign} || echo ‖OR_True-$LINENO
             gh release download -R ${{github.repository}} $UNTAG_SIGN -p ${FC_PREV/.AppImage/_Z.AISign} || echo ‖OR_True-$LINENO
 
             if [ -f $FC_PREV.sign ]; then
