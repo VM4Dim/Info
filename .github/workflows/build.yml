@@ -877,9 +877,9 @@ jobs:
 
         rdiff -b1024 signature FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage \
                                FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AISign
-        ln -s FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AISign FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage.sign
+        # ln -s FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AISign FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage.sign
         gh release upload -R ${{github.repository}} $UNTAG_SIGN FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AISign
-        gh release upload -R ${{github.repository}} $UNTAG_SIGN FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage.sign
+        # gh release upload -R ${{github.repository}} $UNTAG_SIGN FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage.sign
 
         rdiff -b1024 signature fc-${{github.run_number}}-${{matrix.build}}_Z.sqsh FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}_Z.AISign
         gh release upload -R ${{github.repository}} $UNTAG_SIGN FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}_Z.AISign
@@ -902,38 +902,39 @@ jobs:
             echo FC_DPREV = $FC_DPREV / _REV = $FC_DPREV_REV / _DATE = $FC_DPREV_DATE / _DATE_TIME = $FC_DPREV_DATE_TIME
 
             if [[ $FC_DPREV_DATE != $FC_BUILD_DATE ]]; then
-                gh release download -R ${{github.repository}} $UNTAG_SIGN -p $FC_DPREV.sign || echo ‖OR_True-$LINENO
+                # gh release download -R ${{github.repository}} $UNTAG_SIGN -p $FC_DPREV.sign || echo ‖OR_True-$LINENO
                 gh release download -R ${{github.repository}} $UNTAG_SIGN -p ${FC_DPREV/.AppImage/.AISign} || echo ‖OR_True-$LINENO
                 gh release download -R ${{github.repository}} $UNTAG_SIGN -p ${FC_DPREV/.AppImage/_Z.AISign} || echo ‖OR_True-$LINENO
 
-                ln -s $FC_DPREV.sign ${FC_DPREV/.AppImage/.AISign} || echo ‖OR_True-$LINENO
+                # ln -s $FC_DPREV.sign ${FC_DPREV/.AppImage/.AISign} || echo ‖OR_True-$LINENO
 
                 # if [ -e $FC_DPREV.sign ]; then
                 if [ -e ${FC_DPREV/.AppImage/.AISign} ]; then
                     rdiff delta ${FC_DPREV/.AppImage/.AISign} FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage \
-                      FreeCaD-x64-Dev.R${FC_DPREV_REV}.20${FC_DPREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppDelta
+                      FC-x64-Dev.R${FC_DPREV_REV}.20${FC_DPREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AIDelta
 
                     rdiff delta ${FC_DPREV/.AppImage/_Z.AISign} FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}_Z.AppImage \
                       FC-x64-Dev.R${FC_DPREV_REV}.20${FC_DPREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}_Z.AIDelta || echo ‖OR_True-$LINENO
 
                     echo >> \
-                      FreeCaD-x64-Dev.R${FC_DPREV_REV}.20${FC_DPREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppDelta
+                      FC-x64-Dev.R${FC_DPREV_REV}.20${FC_DPREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AIDelta
 
                     echo >> \
                       FC-x64-Dev.R${FC_DPREV_REV}.20${FC_DPREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}_Z.AIDelta
 
                     xxh128sum FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage | head -c 32 >> \
-                      FreeCaD-x64-Dev.R${FC_DPREV_REV}.20${FC_DPREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppDelta
+                      FC-x64-Dev.R${FC_DPREV_REV}.20${FC_DPREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AIDelta
 
                     xxh128sum FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}_Z.AppImage | head -c 32 >> \
                       FC-x64-Dev.R${FC_DPREV_REV}.20${FC_DPREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}_Z.AIDelta
 
+                    ln -s  FC-x64-Dev.R${FC_DPREV_REV}.20${FC_DPREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AIDelta \
+                      FreeCaD-x64-Dev.R${FC_DPREV_REV}.20${FC_DPREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppDelta || echo ‖OR_True-$LINENO
+
+
                     gh release upload --clobber -R ${{github.repository}} $UNTAG_DELTA \
                       "FreeCaD-x64-Dev.R${FC_DPREV_REV}.20${FC_DPREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppDelta#"\
         `            `"FreeCåD-x64-Dev R${FC_DPREV_REV}.${FC_DPREV_DATE:2} ‣ R${FC_BUILD_REV}.${FC_BUILD_DATE:2}.AppDelta" || echo ‖OR_True-$LINENO
-
-                    ln -s FreeCaD-x64-Dev.R${FC_DPREV_REV}.20${FC_DPREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppDelta \
-                               FC-x64-Dev.R${FC_DPREV_REV}.20${FC_DPREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AIDelta
 
                     gh release upload --clobber -R ${{github.repository}} v0.0 \
                               "FC-x64-Dev.R${FC_DPREV_REV}.20${FC_DPREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AIDelta#"\
@@ -970,32 +971,25 @@ jobs:
 
             echo FC_PREV = $FC_PREV / _REV = $FC_PREV_REV / _DATE = $FC_PREV_DATE / _DATE_TIME = $FC_PREV_DATE_TIME
 
-            gh release download -R ${{github.repository}} $UNTAG_SIGN -p $FC_PREV.sign || echo ‖OR_True-$LINENO
+            # gh release download -R ${{github.repository}} $UNTAG_SIGN -p $FC_PREV.sign || echo ‖OR_True-$LINENO
             gh release download -R ${{github.repository}} $UNTAG_SIGN -p ${FC_PREV/.AppImage/.AISign} || echo ‖OR_True-$LINENO
             gh release download -R ${{github.repository}} $UNTAG_SIGN -p ${FC_PREV/.AppImage/_Z.AISign} || echo ‖OR_True-$LINENO
 
-            ln -s $FC_PREV.sign ${FC_PREV/.AppImage/.AISign} || echo ‖OR_True-$LINENO
+            # ln -s $FC_PREV.sign ${FC_PREV/.AppImage/.AISign} || echo ‖OR_True-$LINENO
 
             # if [ -e $FC_PREV.sign ]; then
             if [ -e ${FC_PREV/.AppImage/.AISign} ]; then
-
-              echo == L: $LINENO ==
-
                 rdiff delta ${FC_PREV/.AppImage/.AISign} FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage \
                   FC-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AIDelta || echo ‖OR_True-$LINENO
 
                 rdiff delta ${FC_PREV/.AppImage/_Z.AISign} FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}_Z.AppImage \
                   FC-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}_Z.AIDelta || echo ‖OR_True-$LINENO
 
-              echo == L: $LINENO ==
-
                 echo >> \
                   FC-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AIDelta
 
                 echo >> \
                   FC-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}_Z.AIDelta
-
-              echo == L: $LINENO ==
 
                 xxh128sum FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppImage | head -c 32 >> \
                   FC-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AIDelta
@@ -1003,26 +997,16 @@ jobs:
                 xxh128sum FreeCaD-x64-Dev.R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}_Z.AppImage | head -c 32 >> \
                   FC-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}_Z.AIDelta
 
-              echo == L: $LINENO == =
-              ls -alFh
-
                 ln -s  FC-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AIDelta \
                   FreeCaD-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppDelta || echo ‖OR_True-$LINENO
-
-              echo == L: $LINENO == ==
-              ls -alFh
 
                 gh release upload --clobber -R ${{github.repository}} $UNTAG_DELTA \
                   "FreeCaD-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AppDelta#"\
         `        `"FreeCåD-x64-Dev R${FC_PREV_REV}.${FC_PREV_DATE:2} ‣ R${FC_BUILD_REV}.${FC_BUILD_DATE:2}.AppDelta" || echo ‖OR_True-$LINENO
 
-              echo == L: $LINENO == ===
-
                 gh release upload --clobber -R ${{github.repository}} v0.0 \
                        "FC-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}.AIDelta#"\
         `             `"FC-x64-Dev.R${FC_PREV_REV}.${FC_PREV_DATE:2}_R${FC_BUILD_REV}.${FC_BUILD_DATE:2}.AIDelta" || echo ‖OR_True-$LINENO
-
-              echo == L: $LINENO == ====
 
                 gh release upload --clobber -R ${{github.repository}} v0.0 \
                           "FC-x64-Dev.R${FC_PREV_REV}.20${FC_PREV_DATE_TIME}_R${FC_BUILD_REV}.20${FC_BUILD_DATE_TIME}_Z.AIDelta#"\
