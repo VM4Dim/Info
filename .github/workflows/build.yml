@@ -804,10 +804,12 @@ jobs:
 
     - name: Pack result
       run: |
+        if [[ ${{matrix.build == 'Release'}} ]]; then
         time mksquashfs fc fc-${{github.run_number}}-${{matrix.build}}_Z.sqsh \
           -keep-as-directory -root-owned -no-exports -no-xattrs -mkfs-time 0 -all-time 0 -comp zstd -Xcompression-level 14 -b 256K
 
         echo - - - - - - -
+        fi
 
         time mksquashfs fc fc-${{github.run_number}}-${{matrix.build}}.sqsh \
           -keep-as-directory -root-owned -no-exports -no-xattrs -mkfs-time 0 -all-time 0 -comp zstd -Xcompression-level 16 -b 256K
