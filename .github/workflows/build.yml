@@ -196,7 +196,7 @@ jobs:
     - name: Apt Install
       if: ${{steps.check-rev.outputs.OCCT_NEED_BUILD == 'YES'}}
       run: |
-        sudo apt-get install -V  \
+        sudo apt-get install -V /stonking \
           ccache                           \
           gcc-16  g++-16  gfortran-16      \
           binutils                         \
