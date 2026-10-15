@@ -166,9 +166,9 @@ jobs:
         Pin-Priority: 400
 
 
-        Package: libfreetype-dev libfreetype6 libbz2-dev libbz2-1.0  libfontconfig-dev libfontconfig1-dev uuid-dev libuuid1
-        Pin: release n=resolute
-        Pin-Priority: 850
+        #Package: libfreetype-dev libfreetype6 libbz2-dev libbz2-1.0  libfontconfig-dev libfontconfig1-dev uuid-dev libuuid1
+        #Pin: release n=resolute
+        #Pin-Priority: 850
 
 
         EOF
