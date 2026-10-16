@@ -193,10 +193,14 @@ jobs:
         apt-cache policy libfreetype6-dev libfreetype-dev libfreetype6 libbz2-dev libbz2-1.0 \
           libfontconfig-dev libfontconfig1-dev uuid-dev libuuid1
 
+#    - name: Apt Upgrade
+#      run: |
+#        sudo apt-get upgrade
+
     - name: Apt Install
       if: ${{steps.check-rev.outputs.OCCT_NEED_BUILD == 'YES'}}
       run: |
-        sudo apt-get install -V -t=stonking \
+        sudo apt-get install -V -t=stonking --allow-downgrades \
           ccache                           \
           gcc-16  g++-16  gfortran-16      \
           binutils                         \
