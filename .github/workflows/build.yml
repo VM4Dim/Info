@@ -167,7 +167,7 @@ jobs:
         Pin-Priority: 400
 
 
-        Package: libfreetype-dev libfreetype6 libbz2-dev libbz2-1.0  libfontconfig-dev libfontconfig1-dev uuid-dev libuuid1
+        Package: libfreetype* libbz2*  libfontconfig* uuid-dev libuuid1 tk-dev tk8.6-dev libx11*
         Pin: release n=resolute
         Pin-Priority: 850
 
@@ -201,7 +201,7 @@ jobs:
     - name: Apt Install
       if: ${{steps.check-rev.outputs.OCCT_NEED_BUILD == 'YES'}}
       run: |
-        sudo apt-get install -V -t=stonking --allow-downgrades \
+        sudo apt-get install -V -t=${{env.LAST_UBUNTU_DIST}} --allow-downgrades \
           ccache                           \
           gcc-16  g++-16  gfortran-16      \
           binutils                         \
